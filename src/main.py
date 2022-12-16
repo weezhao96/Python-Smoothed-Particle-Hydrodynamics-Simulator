@@ -25,8 +25,8 @@ if __name__ == '__main__':
     
     sim_param = SimulationParameter(sim_duration=10.0, n_dim=3)
     
-    unit_cube = SimulationDomain(simulation_domain=[[0.0,1.0],
-                                                    [0.0,1.0]],
+    unit_cube = SimulationDomain(sim_domain=[[0.0,1.0],
+                                             [0.0,1.0]],
                                  initial_position=[[0.25,0.75],
                                                    [0.25,0.75]])
     
@@ -38,3 +38,8 @@ if __name__ == '__main__':
     model = BaseSPH(earth, water,
                     sim_param, unit_cube, quintiq,
                     1, "output/")
+    
+    
+    model.run_simulation()
+    
+    print(model.x_G)

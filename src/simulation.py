@@ -19,18 +19,19 @@ class SimulationParameter(object):
 
 class SimulationDomain(object):
     
-    def __init__(self, simulation_domain, initial_position):
+    def __init__(self, sim_domain, initial_position):
     
         # Simulation Domain
-        self.simulation_domain = simulation_domain
+        self.sim_domain = sim_domain
         
         # Initial Particle Position
         self.init_pos = initial_position
         
         
-    def compute_initial_position(self, sph):
+    def compute_no_of_particles(self, sph):
         
-        n_dim = sph.simulation_param.n_dim
+        n_dim = sph.sim_param.n_dim
         
-        n_particle = 0
+        sph.n_particle_G = 9
+        
         

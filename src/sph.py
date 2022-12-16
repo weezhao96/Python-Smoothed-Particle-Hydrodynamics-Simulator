@@ -5,7 +5,8 @@
 import numpy as np
 import abc
 
-import mp_manager, io_manager
+from mp_manager import MP_Manager
+from io_manager import IO_Manager
 
 #%% Main Class
 
@@ -20,15 +21,15 @@ class BaseSPH(object):
         self.particle_model = particle_model
         
         # Simulation
-        self.simulation_param = sim_param
-        self.simulation_domain = sim_domain
+        self.sim_param = sim_param
+        self.sim_domain = sim_domain
         
         # Kernel
         self.kernel = kernel
         
         # Manager
-        self.mp_manager = mp_manager.MP_Manager(n_process)
-        self.io_manager = io_manager.IO_Manager(output_path)
+        self.mp_manager = MP_Manager(n_process)
+        self.io_manager = IO_Manager(output_path)
         
         # Global State Variables
         self.n_particle_G = None # No. of Partiles
@@ -67,10 +68,14 @@ class BaseSPH(object):
         
     def run_simulation(self):
         
-        self.simulation_domain.init_position(self)
+        self.sim_domain.compute_no_of_particles(self)
+        self.mp_manager.assign_share_memory(self.n_particle_G,
+                                            self.sim_param.n_dim)
+        
+        self.__init_particle_state()
         
         
-        
+    #%% Simulation Algorithm
     
     def __perturb_particle(self):
         pass
@@ -118,7 +123,19 @@ class BaseSPH(object):
         self.Ep_total = np.sum(self.Ep)
 
         
-#%% 
+    #%% Simulation Utilities
         
+    def __init_particle_state(self):
         
+        # Buffer
+        buffer = self.mp_manager.shm.buf
+        
+        # Array Shape
+        shape_2D = self.n_particle_G * self.sim_param.n_dim
+        shape_1D = self.n_particle_G
+        
+        # State Allocation
+        self.x_G = np.ndarray(shape_2D, dtype = np.float64, buffer=buffer)
+        self.x_G = np.array([0.5, 0.1, 0.5, 0.2, 0.5, 0.3, 0.5, 0.4,
+                             0.5, 0.5, 0.5, 0.6, 0.5, 0.7, 0.5, 0.8, 0.5, 0.9])
         
