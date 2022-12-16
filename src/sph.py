@@ -1,4 +1,4 @@
-#%% Smoothed Particle Hydrodynamics Model
+# Smoothed Particle Hydrodynamics Model
 
 #%% Import
 

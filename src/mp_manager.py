@@ -1,4 +1,4 @@
-#%% MP Manager
+# MP Manager
 
 #%% Import
 

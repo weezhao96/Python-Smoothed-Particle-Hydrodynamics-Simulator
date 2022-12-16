@@ -1,4 +1,6 @@
-#%% Simulation
+# Simulation
+
+#%% Import
 
 from sph import BaseSPH
 
