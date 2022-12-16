@@ -127,15 +127,22 @@ class BaseSPH(object):
         
     def __init_particle_state(self):
         
-        # Buffer
-        buffer = self.mp_manager.shm.buf
-        
         # Array Shape
         shape_2D = self.n_particle_G * self.sim_param.n_dim
         shape_1D = self.n_particle_G
         
         # State Allocation
-        self.x_G = np.ndarray(shape_2D, dtype = np.float64, buffer=buffer)
+        self.x_G = np.ndarray(shape_2D, dtype = np.float64,
+                              buffer=self.mp_manager.shm['x_G'])
         self.x_G = np.array([0.5, 0.1, 0.5, 0.2, 0.5, 0.3, 0.5, 0.4,
                              0.5, 0.5, 0.5, 0.6, 0.5, 0.7, 0.5, 0.8, 0.5, 0.9])
         
+        self.v_G = np.ndarray(shape_2D, dtype = np.float64,
+                              buffer=self.mp_manager.shm['v_G'])
+        self.v_G = np.array([0.5, 0.1, 0.5, 0.2, 0.5, 0.3, 0.5, 0.4,
+                             0.5, 0.5, 0.5, 0.6, 0.5, 0.7, 0.5, 0.8, 0.5, 0.9]) 
+        
+        self.a_G = np.ndarray(shape_2D, dtype = np.float64,
+                              buffer=self.mp_manager.shm['a_G'])
+        self.a_G = np.array([0.5, 0.1, 0.5, 0.2, 0.5, 0.3, 0.5, 0.4,
+                             0.5, 0.5, 0.5, 0.6, 0.5, 0.7, 0.5, 0.8, 0.5, 0.9])

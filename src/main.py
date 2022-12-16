@@ -43,3 +43,9 @@ if __name__ == '__main__':
     model.run_simulation()
     
     print(model.x_G)
+    
+    
+    
+    
+    
+    
