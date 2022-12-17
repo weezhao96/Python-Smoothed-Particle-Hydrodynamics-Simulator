@@ -29,10 +29,10 @@ class SimulationParameter(object):
 
 class SimulationDomain(object):
     
-    def __init__(self, sim_domain, initial_position):
+    def __init__(self, bounding_box, initial_position):
     
         # Simulation Domain
-        self.sim_domain = sim_domain
+        self.bounding_box = bounding_box
         
         # Initial Particle Position
         self.init_pos = initial_position

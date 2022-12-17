@@ -5,11 +5,12 @@
 from model import Atmosphere, Particle
 from simulation import SimulationParameter, SimulationDomain
 from kernel import QuinticKernel
-from sph import BaseSPH
+from sph import BasicSPH
 from precision_enum import IntType, FloatType
+from sph_util import SPH_Util
 
 
-#%%
+#%% Main
 
 if __name__ == '__main__':
 
@@ -25,12 +26,12 @@ if __name__ == '__main__':
     
     #%% Simulation Definition
     
-    sim_param = SimulationParameter(n_dim=2, sim_duration=10.0,
+    sim_param = SimulationParameter(n_dim=2, sim_duration=1.0, dt=0.1,
                                     float_precision=FloatType.FLOAT32,
                                     int_precision=IntType.INT16)
     
-    unit_cube = SimulationDomain(sim_domain=[[0.0,1.0],
-                                             [0.0,1.0]],
+    unit_cube = SimulationDomain(bounding_box=[[0.0,1.0],
+                                               [0.0,1.0]],
                                  initial_position=[[0.25,0.75],
                                                    [0.25,0.75]])
     
@@ -39,15 +40,12 @@ if __name__ == '__main__':
     
     #%% SPH
     
-    model = BaseSPH(earth, water,
-                    sim_param, unit_cube, quintiq,
-                    1, "output/")
+    model = BasicSPH(SPH_Util(), earth, water,
+                     sim_param, unit_cube, quintiq,
+                     1, "output/")
     
     
     model.run_simulation()
-    
-    print(model.x_G)
-    print(model.id_G)
     
     
     

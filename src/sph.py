@@ -7,16 +7,18 @@ import abc
 
 from mp_manager import MP_Manager
 from io_manager import IO_Manager
-from precision_enum import IntType, FloatType
 
 
-#%% Main Class
+#%% Base Class Definition
 
 class BaseSPH(object):
     
-    def __init__(self, atmospheric_model, particle_model,
+    def __init__(self, utility, atmospheric_model, particle_model,
                  sim_param, sim_domain, kernel,
                  n_process, output_path):
+        
+        # Utility Module
+        self.util = utility
         
         # Model
         self.atmospheric_model = atmospheric_model
@@ -67,22 +69,14 @@ class BaseSPH(object):
         self.Ep_total = None # Total Potential Energy
         self.E_total = None # Total Energy
         
-        
-    def run_simulation(self):
-        
-        self.n_particle_G = self.sim_domain.compute_no_of_particles()
-        self.mp_manager.assign_share_memory(self.n_particle_G,
-                                            self.sim_param)
-        self.__init_particle_state()
-
-        
-        
-        
+    
     #%% Simulation Algorithm
     
-    def __perturb_particle(self):
+    @abc.abstractmethod
+    def run_simulation(self):
         pass
     
+    @abc.abstractmethod
     def __boundary_check(self):
         pass
     
@@ -95,12 +89,17 @@ class BaseSPH(object):
     def __rescale_mass_density_pressure(self):
         pass
     
+    @abc.abstractmethod
     def __accel_computation(self):
+        pass
+    
+    @abc.abstractmethod
+    def __time_stepping(self):
         pass
     
     def __energy_computation(self):
         
-        n_dim = self.simulation_param.n_dim
+        n_dim = self.sim_param.n_dim
         
         # Loop (Partial Energy Computation)
         for i in range(self.n_particle):
@@ -113,9 +112,9 @@ class BaseSPH(object):
             v = self.v[index_start:index_end]
             self.Ek[i] = np.dot(v,v)
             
-            
+        
         # Ep <- z
-        self.Ep = np.ndarray(self.n_particle, dtype = np.float64, buffer=self.x, 
+        self.Ep = np.ndarray(self.n_particle, dtype=np.float64, buffer=self.x, 
                              offset=self.sim_param.n_dim, strides=self.sim_param.n_dim)
         
         # Energy Computation
@@ -126,42 +125,65 @@ class BaseSPH(object):
         # Total Energy Computation
         self.Ek_total = np.sum(self.Ek)
         self.Ep_total = np.sum(self.Ep)
+        
 
+#%% BasicSPH
+
+class BasicSPH(BaseSPH):
+    
+    def run_simulation(self):
         
-    #%% Simulation Utilities
+        self.n_particle_G = self.sim_domain.compute_no_of_particles()
+        self.mp_manager.assign_share_memory(self.n_particle_G, self.sim_param)
+        self.util.init_particle_state(self)
+        print(self.x)
         
-    def __init_particle_state(self):
+        self.__boundary_check()
+
+        while (self.sim_param.t < self.sim_param.T):
+            
+            self.__accel_computation()
+            self.__time_stepping()
+            self.__boundary_check()
+    
+            self.sim_param.t += self.sim_param.dt
+            
+            print('t = {0} : x = {1}'.format(self.sim_param.t, np.round(self.x,3)))
+            
+            
+    def __boundary_check(self):
         
-        # Array Shape
-        shape_2D = self.n_particle_G * self.sim_param.n_dim
-        shape_1D = self.n_particle_G
+        # Index
+        index = 0
         
-        # Data Type
-        dtype_float = self.sim_param.float_precision.get_np_dtype()
-        dtype_int = self.sim_param.int_precision.get_np_dtype()
+        # Bounding Box
+        box = self.sim_domain.bounding_box
         
-        # State Allocation
-        self.x_G = np.ndarray(shape_2D, dtype = dtype_float,
-                              buffer=self.mp_manager.shm['x_G'].buf)
-        self.x_G = np.array([0.1, 0.5, 0.2, 0.5, 0.3, 0.5, 0.4, 0.5,
-                             0.5, 0.5, 0.6, 0.5, 0.7, 0.5, 0.8, 0.5, 0.9, 0.5])
+        # Loop
+        for i in range(self.n_particle_G):
+            for dim in range(self.sim_param.n_dim):
+                
+                # Lower Bound
+                if (self.x[index] < box[dim][0] + self.particle_model.h):
+                    
+                    self.x[index] = box[dim][0] + self.particle_model.h
+                    self.v[index] *= -0.5
+                    
+                elif (self.x[index] > box[dim][1] - self.particle_model.h):
+                    
+                    self.x[index] = box[dim][0] - self.particle_model.h
+                    self.v[index] *= -0.5
+                    
+                index += 1
+                
+    
+    def __accel_computation(self):
         
-        self.v_G = np.ndarray(shape_2D, dtype = dtype_float,
-                              buffer=self.mp_manager.shm['v_G'].buf)
-        self.v_G = np.array([0 for i in range(self.n_particle_G)]) 
+        self.a = np.random.rand(18)
         
-        self.a_G = np.ndarray(shape_2D, dtype = dtype_float,
-                              buffer=self.mp_manager.shm['a_G'].buf)
-        self.a_G = np.array([0 for i in range(self.n_particle_G)])
+
+    def __time_stepping(self):
         
-        self.id_G = np.ndarray(shape_1D, dtype = dtype_int,
-                               buffer=self.mp_manager.shm['id_G'].buf)
-        self.id_G = np.array([i for i in range(self.n_particle_G)])
+        self.v = self.v + self.a * self.sim_param.dt
+        self.x = self.x + self.v * self.sim_param.dt
         
-        self.rho_G = np.ndarray(shape_1D, dtype = dtype_float,
-                                buffer=self.mp_manager.shm['rho_G'].buf)
-        self.rho_G = np.array([1000.0 for i in range(self.n_particle_G)])
-        
-        self.p_G = np.ndarray(shape_1D, dtype = dtype_float,
-                              buffer=self.mp_manager.shm['p_G'].buf)
-        self.p_G = np.array([1000.0 for i in range(self.n_particle_G)])
