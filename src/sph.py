@@ -7,6 +7,8 @@ import abc
 
 from mp_manager import MP_Manager
 from io_manager import IO_Manager
+from precision_enum import IntType, FloatType
+
 
 #%% Main Class
 
@@ -68,11 +70,12 @@ class BaseSPH(object):
         
     def run_simulation(self):
         
-        self.sim_domain.compute_no_of_particles(self)
+        self.n_particle_G = self.sim_domain.compute_no_of_particles()
         self.mp_manager.assign_share_memory(self.n_particle_G,
-                                            self.sim_param.n_dim)
-        
+                                            self.sim_param)
         self.__init_particle_state()
+
+        
         
         
     #%% Simulation Algorithm
@@ -110,8 +113,10 @@ class BaseSPH(object):
             v = self.v[index_start:index_end]
             self.Ek[i] = np.dot(v,v)
             
-            # Ep <- z
-            self.Ep[i] = x[index_end - 1]
+            
+        # Ep <- z
+        self.Ep = np.ndarray(self.n_particle, dtype = np.float64, buffer=self.x, 
+                             offset=self.sim_param.n_dim, strides=self.sim_param.n_dim)
         
         # Energy Computation
         m = self.particle_model.m
@@ -131,18 +136,32 @@ class BaseSPH(object):
         shape_2D = self.n_particle_G * self.sim_param.n_dim
         shape_1D = self.n_particle_G
         
+        # Data Type
+        dtype_float = self.sim_param.float_precision.get_np_dtype()
+        dtype_int = self.sim_param.int_precision.get_np_dtype()
+        
         # State Allocation
-        self.x_G = np.ndarray(shape_2D, dtype = np.float64,
-                              buffer=self.mp_manager.shm['x_G'])
-        self.x_G = np.array([0.5, 0.1, 0.5, 0.2, 0.5, 0.3, 0.5, 0.4,
-                             0.5, 0.5, 0.5, 0.6, 0.5, 0.7, 0.5, 0.8, 0.5, 0.9])
+        self.x_G = np.ndarray(shape_2D, dtype = dtype_float,
+                              buffer=self.mp_manager.shm['x_G'].buf)
+        self.x_G = np.array([0.1, 0.5, 0.2, 0.5, 0.3, 0.5, 0.4, 0.5,
+                             0.5, 0.5, 0.6, 0.5, 0.7, 0.5, 0.8, 0.5, 0.9, 0.5])
         
-        self.v_G = np.ndarray(shape_2D, dtype = np.float64,
-                              buffer=self.mp_manager.shm['v_G'])
-        self.v_G = np.array([0.5, 0.1, 0.5, 0.2, 0.5, 0.3, 0.5, 0.4,
-                             0.5, 0.5, 0.5, 0.6, 0.5, 0.7, 0.5, 0.8, 0.5, 0.9]) 
+        self.v_G = np.ndarray(shape_2D, dtype = dtype_float,
+                              buffer=self.mp_manager.shm['v_G'].buf)
+        self.v_G = np.array([0 for i in range(self.n_particle_G)]) 
         
-        self.a_G = np.ndarray(shape_2D, dtype = np.float64,
-                              buffer=self.mp_manager.shm['a_G'])
-        self.a_G = np.array([0.5, 0.1, 0.5, 0.2, 0.5, 0.3, 0.5, 0.4,
-                             0.5, 0.5, 0.5, 0.6, 0.5, 0.7, 0.5, 0.8, 0.5, 0.9])
+        self.a_G = np.ndarray(shape_2D, dtype = dtype_float,
+                              buffer=self.mp_manager.shm['a_G'].buf)
+        self.a_G = np.array([0 for i in range(self.n_particle_G)])
+        
+        self.id_G = np.ndarray(shape_1D, dtype = dtype_int,
+                               buffer=self.mp_manager.shm['id_G'].buf)
+        self.id_G = np.array([i for i in range(self.n_particle_G)])
+        
+        self.rho_G = np.ndarray(shape_1D, dtype = dtype_float,
+                                buffer=self.mp_manager.shm['rho_G'].buf)
+        self.rho_G = np.array([1000.0 for i in range(self.n_particle_G)])
+        
+        self.p_G = np.ndarray(shape_1D, dtype = dtype_float,
+                              buffer=self.mp_manager.shm['p_G'].buf)
+        self.p_G = np.array([1000.0 for i in range(self.n_particle_G)])

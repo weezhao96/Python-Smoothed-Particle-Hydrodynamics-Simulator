@@ -3,6 +3,7 @@
 #%% Import
 
 import numpy as np
+import abc
 
 #%% Main Class
 
@@ -15,16 +16,16 @@ class BaseKernel(object):
         
         self.alpha_dim = self._set_alpha_dim(n_dim)
 
+    @abc.abstractmethod
     def _set_alpha_dim(n_dim):
-        
         pass
 
+    @abc.abstractmethod
     def W(q):
-        
         pass
 
+    @abc.abstractmethod
     def nable_W(q):
-        
         pass
     
     

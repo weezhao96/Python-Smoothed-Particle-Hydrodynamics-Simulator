@@ -6,6 +6,8 @@ from model import Atmosphere, Particle
 from simulation import SimulationParameter, SimulationDomain
 from kernel import QuinticKernel
 from sph import BaseSPH
+from precision_enum import IntType, FloatType
+
 
 #%%
 
@@ -23,7 +25,9 @@ if __name__ == '__main__':
     
     #%% Simulation Definition
     
-    sim_param = SimulationParameter(sim_duration=10.0, n_dim=2)
+    sim_param = SimulationParameter(n_dim=2, sim_duration=10.0,
+                                    float_precision=FloatType.FLOAT32,
+                                    int_precision=IntType.INT16)
     
     unit_cube = SimulationDomain(sim_domain=[[0.0,1.0],
                                              [0.0,1.0]],
@@ -43,7 +47,7 @@ if __name__ == '__main__':
     model.run_simulation()
     
     print(model.x_G)
-    
+    print(model.id_G)
     
     
     
