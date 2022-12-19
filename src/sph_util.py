@@ -3,7 +3,7 @@
 #%% Import
 
 import numpy as np
-
+import matplotlib.pyplot as plt
 
 #%% Class Definition
 
@@ -12,7 +12,8 @@ class SPH_Util(object):
     def __init__(self):
         pass
     
-    def init_particle_state(self, sph):
+    @staticmethod
+    def init_particle_state(sph):
         
         # Array Shape
         shape_2D = sph.n_particle_G * sph.sim_param.n_dim
@@ -73,6 +74,25 @@ class SPH_Util(object):
                              buffer=sph.mp_manager.shm['p_G'].buf)
         sph.p = np.array([1000.0 for i in range(shape_1D)])
         
-        
-    def perturb_particle(self, sph):
+    @staticmethod
+    def perturb_particle(sph):
         pass
+    
+    @staticmethod
+    def plot(sph, plt, ax):
+        
+        plt.cla()
+        
+        ax.plot(sph.x[::2], sph.x[1::2], '.', markersize=15) 
+        ax.grid(True)
+        ax.set_aspect('equal', 'box')
+        
+        plt.xlabel('$x$', fontsize=15, usetex=True)
+        plt.ylabel('$y$', fontsize=15, usetex=True)
+        plt.xlim(sph.sim_domain.bounding_box[0])
+        plt.ylim(sph.sim_domain.bounding_box[1])
+        
+        plt.title('$t = {0} s$'.format(sph.sim_param.t), usetex=True)
+        
+        plt.show()
+        plt.pause(0.05)

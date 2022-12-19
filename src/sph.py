@@ -4,6 +4,7 @@
 
 import numpy as np
 import abc
+import matplotlib.pyplot as plt
 
 from mp_manager import MP_Manager
 from io_manager import IO_Manager
@@ -136,11 +137,12 @@ class BasicSPH(BaseSPH):
         self.n_particle_G = self.sim_domain.compute_no_of_particles()
         self.mp_manager.assign_share_memory(self.n_particle_G, self.sim_param)
         self.util.init_particle_state(self)
-        print(self.x)
         
         self.__boundary_check()
 
-        while (self.sim_param.t < self.sim_param.T):
+        fig, ax = plt.subplots()
+        
+        while (self.sim_param.t < self.sim_param.T - 0.00000001):
             
             self.__accel_computation()
             self.__time_stepping()
@@ -148,7 +150,8 @@ class BasicSPH(BaseSPH):
     
             self.sim_param.t += self.sim_param.dt
             
-            print('t = {0} : x = {1}'.format(self.sim_param.t, np.round(self.x,3)))
+            self.util.plot(self, plt, ax)
+            
             
             
     def __boundary_check(self):
@@ -171,7 +174,7 @@ class BasicSPH(BaseSPH):
                     
                 elif (self.x[index] > box[dim][1] - self.particle_model.h):
                     
-                    self.x[index] = box[dim][0] - self.particle_model.h
+                    self.x[index] = box[dim][1] - self.particle_model.h
                     self.v[index] *= -0.5
                     
                 index += 1
@@ -179,7 +182,7 @@ class BasicSPH(BaseSPH):
     
     def __accel_computation(self):
         
-        self.a = np.random.rand(18)
+        self.a = 1.0 * np.random.rand(self.n_particle_G * self.sim_param.n_dim) - 0.5
         
 
     def __time_stepping(self):

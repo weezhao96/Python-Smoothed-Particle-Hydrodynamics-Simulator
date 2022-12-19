@@ -26,7 +26,7 @@ if __name__ == '__main__':
     
     #%% Simulation Definition
     
-    sim_param = SimulationParameter(n_dim=2, sim_duration=1.0, dt=0.1,
+    sim_param = SimulationParameter(n_dim=2, sim_duration=5.0, dt=0.1,
                                     float_precision=FloatType.FLOAT32,
                                     int_precision=IntType.INT16)
     
