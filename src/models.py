@@ -9,6 +9,7 @@ class Atmosphere(object):
         # Simulation Atmospheric and Thermodynamic Parameters
         self.g = gravitational_strength # Gravitational Strength
         
+        
 #%% Particle Model
 
 class Particle(object):

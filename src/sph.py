@@ -127,6 +127,14 @@ class BaseSPH(object):
         self.Ek_total = np.sum(self.Ek)
         self.Ep_total = np.sum(self.Ep)
         
+        
+    def clean_up_simulation(self):
+        
+        for i in self.mp_manager.shm:
+            
+            self.mp_manager.shm[i].close()
+            self.mp_manager.shm[i].unlink()
+        
 
 #%% BasicSPH
 
@@ -134,24 +142,22 @@ class BasicSPH(BaseSPH):
     
     def run_simulation(self):
         
-        self.n_particle_G = self.sim_domain.compute_no_of_particles()
-        self.mp_manager.assign_share_memory(self.n_particle_G, self.sim_param)
+
         self.util.init_particle_state(self)
-        
-        self.__boundary_check()
+                
+        # self.__boundary_check()
 
         fig, ax = plt.subplots()
-        
-        while (self.sim_param.t < self.sim_param.T - 0.00000001):
+                
+        # while (self.sim_param.t < self.sim_param.T - np.finfo(float).eps):
             
-            self.__accel_computation()
-            self.__time_stepping()
-            self.__boundary_check()
+        #     self.__accel_computation()
+        #     self.__time_stepping()
+        #     self.__boundary_check()
     
-            self.sim_param.t += self.sim_param.dt
+        #     self.sim_param.t += self.sim_param.dt
             
-            self.util.plot(self, plt, ax)
-            
+        self.util.plot(self, plt, ax)
             
             
     def __boundary_check(self):
@@ -182,11 +188,15 @@ class BasicSPH(BaseSPH):
     
     def __accel_computation(self):
         
-        self.a = 1.0 * np.random.rand(self.n_particle_G * self.sim_param.n_dim) - 0.5
+        n_dim = self.sim_param.n_dim
+        shape = self.a.shape
         
+        self.a = 1.0 * np.random.rand(self.n_particle_G * self.sim_param.n_dim) - 0.5
+        self.a[n_dim-1:shape:n_dim] = self.a[n_dim-1:shape:n_dim] - self.atmospheric_model.g
 
     def __time_stepping(self):
         
         self.v = self.v + self.a * self.sim_param.dt
         self.x = self.x + self.v * self.sim_param.dt
+        
         

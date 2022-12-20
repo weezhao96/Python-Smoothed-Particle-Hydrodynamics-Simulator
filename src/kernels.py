@@ -45,11 +45,13 @@ class QuinticKernel(BaseKernel):
         elif n_dim == 3:
             self.alpha_dim = 21 / (16 * np.pi * np.power(self.h,3))            
             
+            
     def W(self, q):
         
        W = self.alpha_dim * np.power((1.0 - 0.5 * q),4) * (2 * q + 1)
        
        return W
+    
     
     def nabla_W(self, q):
         
