@@ -31,41 +31,39 @@ class SPH_Util(object):
         
         # Data Type
         dtype_float = sph.sim_param.float_precision.get_np_dtype()
-        dtype_int = sph.sim_param.int_precision.get_np_dtype()
+        dtype_int = sph.sim_param.int_precision.get_np_dtype(signed=False)
         
         # Assign Position
-        
-        # Position
-        sph.x_G = np.ndarray(shape_2D, dtype = dtype_float, buffer=sph.mp_manager.shm['x_G'].buf)
-        
+        sph.x_G = np.ndarray(shape_2D, dtype = dtype_float, buffer=sph.mp_manager.shm['x_G'].buf)        
         self.recursion_build(sph, 0, [0 for i in range(n_dim)], n_per_dim, 0)
         
         # Assign 1D States
-        sph.id_G = np.ndarray(shape_1D, dtype = dtype_int, buffer=sph.mp_manager.shm['id_G'].buf)
-        sph.id_G = np.array([i for i in range(shape_1D)])
+        sph.id_G = np.ndarray(shape_1D, dtype=dtype_int, buffer=sph.mp_manager.shm['id_G'].buf)
+        sph.id_G = np.array([i for i in range(shape_1D)], dtype=dtype_int)
 
-        sph.Ek_G = np.ndarray(shape_1D, dtype = dtype_int, buffer=sph.mp_manager.shm['Ek_G'].buf)
-        sph.Ek_G = np.array([0.0 for i in range(shape_1D)])
+        sph.Ek_G = np.ndarray(shape_1D, dtype=dtype_float, buffer=sph.mp_manager.shm['Ek_G'].buf)
+        sph.Ek_G = np.zeros(shape_1D, dtype=dtype_float)
         
-        sph.Ep_G = np.ndarray(shape_1D, dtype = dtype_int, buffer=sph.mp_manager.shm['Ep_G'].buf)
-        sph.Ep_G = np.array([0.0 for i in range(shape_1D)])
+        sph.Ep_G = np.ndarray(shape_1D, dtype=dtype_float, buffer=sph.mp_manager.shm['Ep_G'].buf)
+        sph.Ep_G = np.zeros(shape_1D, dtype=dtype_float)
         
-        sph.E_G = np.ndarray(shape_1D, dtype = dtype_int, buffer=sph.mp_manager.shm['E_G'].buf)
-        sph.E_G = np.array([0.0 for i in range(shape_1D)])
+        sph.E_G = np.ndarray(shape_1D, dtype=dtype_float, buffer=sph.mp_manager.shm['E_G'].buf)
+        sph.E_G = np.zeros(shape_1D, dtype=dtype_float)
         
+        sph.rho_G = np.ndarray(shape_1D, dtype=dtype_float, buffer=sph.mp_manager.shm['rho_G'].buf)
+        sph.rho_G = np.array([dtype_float(sph.particle_model.rho_0) for i in range(shape_1D)],
+                             dtype=dtype_float)
+        
+        sph.p_G = np.ndarray(shape_1D, dtype=dtype_float, buffer=sph.mp_manager.shm['p_G'].buf)
+        sph.p_G = np.zeros(shape_1D, dtype=dtype_float)
+                
         # Assign 2D States
-        sph.v_G = np.ndarray(shape_2D, dtype = dtype_float, buffer=sph.mp_manager.shm['v_G'].buf)
-        sph.v_G = np.array([0.0 for i in range(shape_2D)]) 
+        sph.v_G = np.ndarray(shape_2D, dtype=dtype_float, buffer=sph.mp_manager.shm['v_G'].buf)
+        sph.v_G = np.zeros(shape_2D, dtype=dtype_float)
         
-        sph.a_G = np.ndarray(shape_2D, dtype = dtype_float, buffer=sph.mp_manager.shm['a_G'].buf)
-        sph.a_G = np.array([0.0 for i in range(shape_2D)])
+        sph.a_G = np.ndarray(shape_2D, dtype=dtype_float, buffer=sph.mp_manager.shm['a_G'].buf)
+        sph.a_G = np.zeros(shape_2D, dtype=dtype_float)
         
-        sph.rho_G = np.ndarray(shape_1D, dtype = dtype_float, buffer=sph.mp_manager.shm['rho_G'].buf)
-        sph.rho_G = np.array([sph.particle_model.rho_0 for i in range(shape_1D)])
-        
-        sph.p_G = np.ndarray(shape_1D, dtype = dtype_float, buffer=sph.mp_manager.shm['p_G'].buf)
-        sph.p_G = np.array([1000.0 for i in range(shape_1D)])
- 
     
     def recursion_build(self, sph, loop_depth, loop_index, loop_lim, i_particle):
         
@@ -120,12 +118,12 @@ class SPH_Util(object):
         ax.grid(True)
         ax.set_aspect('equal', 'box')
         
-        plt.xlabel('$x$', fontsize=15, usetex=True)
-        plt.ylabel('$y$', fontsize=15, usetex=True)
+        plt.xlabel('$x$', fontsize=15, usetex=False)
+        plt.ylabel('$y$', fontsize=15, usetex=False)
         plt.xlim(sph.sim_domain.bounding_box[0])
         plt.ylim(sph.sim_domain.bounding_box[1])
         
-        plt.title('$t = {0} \, s$'.format(sph.sim_param.t), usetex=True)
+        plt.title('$t = {0:.3f} \, s$'.format(sph.sim_param.t), usetex=False)
         
         plt.show()
         

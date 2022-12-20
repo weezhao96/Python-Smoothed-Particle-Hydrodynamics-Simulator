@@ -88,7 +88,10 @@ class BaseSPH(object):
         pass
         
     def _rescale_mass_density_pressure(self):
-        pass
+        
+        dtype_float = self.sim_param.float_precision.get_np_dtype()
+        
+        self.particle_model.m = dtype_float(self.particle_model.m)
     
     @abc.abstractmethod
     def _accel_computation(self):
@@ -113,10 +116,10 @@ class BaseSPH(object):
             v = self.v[index_start:index_end]
             self.Ek[i] = np.dot(v,v)
             
-        
         # Ep <- z
-        self.Ep = self.x[self.sim_param.n_dim-1::self.sim_param.n_dim]
-                
+        self.Ep = np.array(self.x[self.sim_param.n_dim-1::self.sim_param.n_dim],
+                           dtype=self.sim_param.float_precision.get_np_dtype())
+
         # Energy Computation
         m = self.particle_model.m
         self.Ek = 0.5 * m * self.Ek
@@ -126,8 +129,8 @@ class BaseSPH(object):
         self.Ek_total = np.sum(self.Ek)
         self.Ep_total = np.sum(self.Ep)
         
-        print('Total Kinetic Energy = {}'.format(self.Ek_total))
-        print('Total Potential Energy = {}'.format(self.Ep_total))
+        print('Total Kinetic Energy = {:.3f}'.format(self.Ek_total))
+        print('Total Potential Energy = {:.3f}'.format(self.Ep_total))
         
         
     def clean_up_simulation(self):
@@ -149,22 +152,39 @@ class BasicSPH(BaseSPH):
         self.util.perturb_particle(self)
         
         self.mp_manager.distribute_particle(self)
-
+        
         self._boundary_check()
+        
+        self._rescale_mass_density_pressure()
+        
+        print('t = {:.3f}'.format(self.sim_param.t))
+
+        self._energy_computation()
+
+        print(' ')
 
         fig, ax = plt.subplots()
                 
         while (self.sim_param.t < self.sim_param.T - np.finfo(float).eps):
             
+
             self._accel_computation()
+            
             self._time_stepping()
+
             self._boundary_check()
     
             self.sim_param.t += self.sim_param.dt
+            
+            print('t = {:.3f}'.format(self.sim_param.t))
+
             self._energy_computation()
             
+            print(' ')
+
             
             self.util.plot(self, plt, ax)
+            
             
             
     def _boundary_check(self):
@@ -198,7 +218,7 @@ class BasicSPH(BaseSPH):
         n_dim = self.sim_param.n_dim
         shape = self.a.shape[0]
         
-        self.a = 1.0 * np.random.rand(self.n_particle * self.sim_param.n_dim) - 0.5
+        self.a = 1.0 * np.random.rand(shape).astype(self.sim_param.float_precision.get_np_dtype()) - 0.5
 
         # self.a[n_dim-1:shape:n_dim] = self.a[n_dim-1:shape:n_dim] - self.atmospheric_model.g
 

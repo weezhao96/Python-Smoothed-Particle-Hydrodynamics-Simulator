@@ -27,7 +27,7 @@ class MP_Manager(object):
         precision_byte = sim_param.float_precision.value
 
         # 2D Array
-        mem_array_2D = n_particle_G * n_dim * precision_byte
+        mem_array_2D = int(n_particle_G * n_dim * precision_byte)
                 
         self.shm['x_G'] = shared_memory.SharedMemory(create=True, name='x_G', size=mem_array_2D)
         self.shm['v_G'] = shared_memory.SharedMemory(create=True, name='v_G', size=mem_array_2D)
@@ -52,7 +52,7 @@ class MP_Manager(object):
         # Array Memory Size
         precision_byte = sim_param.int_precision.value
 
-        mem_array_1D = n_particle_G * precision_byte
+        mem_array_1D = int(n_particle_G * precision_byte)
         
         self.shm['id_G'] = shared_memory.SharedMemory(create=True, name='id_G',
                                                       size=mem_array_1D)
@@ -62,6 +62,6 @@ class MP_Manager(object):
         
         for attr in sph.__dict__:
 
-            if attr[-2::] == '_G':
+            if attr[-2:] == '_G':
                 sph.__dict__[attr[:-2]] = sph.__dict__[attr]
             

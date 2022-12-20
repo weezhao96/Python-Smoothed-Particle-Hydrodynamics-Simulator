@@ -24,4 +24,4 @@ class Particle(object):
         self.mu = viscosity # Viscosity
         self.gamma = specific_heat_ratio # Specific Heat Ratio
         self.c = speed_of_sound # Speed of Sound
-        self.m = 1 # Particle Mass = 1 - assumed to be 1, and rescaled during start of simulation
+        self.m = 1.0 # Particle Mass = 1 - assumed to be 1, and rescaled during start of simulation

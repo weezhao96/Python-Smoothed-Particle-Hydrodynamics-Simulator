@@ -18,19 +18,36 @@ class IntType(Enum):
     INT32 = 4
     INT64 = 8
     
-    def get_np_dtype(self):
+    def get_np_dtype(self, signed=True):
         
-        if self.value == 1:
-            return np.int8
-        
-        elif self.value == 2:
-            return np.int16
-        
-        elif self.value == 4:
-            return np.int32
-        
-        elif self.value == 8:
-            return np.int64 
+        if signed:
+            
+            if self.value == 1:
+                return np.int8
+            
+            elif self.value == 2:
+                return np.int16
+            
+            elif self.value == 4:
+                return np.int32
+            
+            elif self.value == 8:
+                return np.int64
+            
+            
+        else:
+            
+            if self.value == 1:
+                return np.uint8
+            
+            elif self.value == 2:
+                return np.uint16
+            
+            elif self.value == 4:
+                return np.uint32
+            
+            elif self.value == 8:
+                return np.uint64 
     
 
 #%% Float Type
