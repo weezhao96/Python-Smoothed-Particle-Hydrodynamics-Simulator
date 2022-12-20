@@ -78,27 +78,27 @@ class BaseSPH(object):
         pass
     
     @abc.abstractmethod
-    def __boundary_check(self):
+    def _boundary_check(self):
         pass
     
-    def __map_neighbour(self):
+    def _map_neighbour(self):
         pass
     
-    def __density_pressure_computation(self):
+    def _density_pressure_computation(self):
         pass
         
-    def __rescale_mass_density_pressure(self):
+    def _rescale_mass_density_pressure(self):
         pass
     
     @abc.abstractmethod
-    def __accel_computation(self):
+    def _accel_computation(self):
         pass
     
     @abc.abstractmethod
-    def __time_stepping(self):
+    def _time_stepping(self):
         pass
     
-    def __energy_computation(self):
+    def _energy_computation(self):
         
         n_dim = self.sim_param.n_dim
         
@@ -115,9 +115,8 @@ class BaseSPH(object):
             
         
         # Ep <- z
-        self.Ep = np.ndarray(self.n_particle, dtype=np.float64, buffer=self.x, 
-                             offset=self.sim_param.n_dim, strides=self.sim_param.n_dim)
-        
+        self.Ep = self.x[self.sim_param.n_dim-1::self.sim_param.n_dim]
+                
         # Energy Computation
         m = self.particle_model.m
         self.Ek = 0.5 * m * self.Ek
@@ -126,6 +125,9 @@ class BaseSPH(object):
         # Total Energy Computation
         self.Ek_total = np.sum(self.Ek)
         self.Ep_total = np.sum(self.Ep)
+        
+        print('Total Kinetic Energy = {}'.format(self.Ek_total))
+        print('Total Potential Energy = {}'.format(self.Ep_total))
         
         
     def clean_up_simulation(self):
@@ -142,25 +144,30 @@ class BasicSPH(BaseSPH):
     
     def run_simulation(self):
         
-
         self.util.init_particle_state(self)
-                
-        # self.__boundary_check()
+        
+        self.util.perturb_particle(self)
+        
+        self.mp_manager.distribute_particle(self)
+
+        self._boundary_check()
 
         fig, ax = plt.subplots()
                 
-        # while (self.sim_param.t < self.sim_param.T - np.finfo(float).eps):
+        while (self.sim_param.t < self.sim_param.T - np.finfo(float).eps):
             
-        #     self.__accel_computation()
-        #     self.__time_stepping()
-        #     self.__boundary_check()
+            self._accel_computation()
+            self._time_stepping()
+            self._boundary_check()
     
-        #     self.sim_param.t += self.sim_param.dt
+            self.sim_param.t += self.sim_param.dt
+            self._energy_computation()
             
-        self.util.plot(self, plt, ax)
+            
+            self.util.plot(self, plt, ax)
             
             
-    def __boundary_check(self):
+    def _boundary_check(self):
         
         # Index
         index = 0
@@ -186,17 +193,19 @@ class BasicSPH(BaseSPH):
                 index += 1
                 
     
-    def __accel_computation(self):
+    def _accel_computation(self):
         
         n_dim = self.sim_param.n_dim
-        shape = self.a.shape
+        shape = self.a.shape[0]
         
-        self.a = 1.0 * np.random.rand(self.n_particle_G * self.sim_param.n_dim) - 0.5
-        self.a[n_dim-1:shape:n_dim] = self.a[n_dim-1:shape:n_dim] - self.atmospheric_model.g
+        self.a = 1.0 * np.random.rand(self.n_particle * self.sim_param.n_dim) - 0.5
 
-    def __time_stepping(self):
+        # self.a[n_dim-1:shape:n_dim] = self.a[n_dim-1:shape:n_dim] - self.atmospheric_model.g
+
+    def _time_stepping(self):
         
         self.v = self.v + self.a * self.sim_param.dt
+        #self.v = 1.0 * np.random.rand(self.n_particle * self.sim_param.n_dim) - 0.5
         self.x = self.x + self.v * self.sim_param.dt
         
         

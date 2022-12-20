@@ -57,7 +57,7 @@ class QuinticKernel(BaseKernel):
         
         q4 = np.power(q,4)
         q3 = np.power(q,3)
-        p2 = np.power(q,2)
+        q2 = np.power(q,2)
         
         nabla_W = self.alpha_dim / self.h * (0.625 * q4 - 3.75 * q3 + 7.5 * q2 - 5 * q)
         

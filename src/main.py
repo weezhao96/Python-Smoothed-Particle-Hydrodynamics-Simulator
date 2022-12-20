@@ -27,11 +27,10 @@ if __name__ == '__main__':
     #%% Simulation Definition
     
     sim_param = SimulationParameter(n_dim=2, sim_duration=5.0, dt=0.1,
-                                    float_precision=FloatType.FLOAT32, int_precision=IntType.INT16)
+                                    float_precision=FloatType.FLOAT64, int_precision=IntType.INT16)
     
     unit_cube = SimulationDomain(bounding_box=[[0.0,1.0], [0.0,1.0]],
-                                 initial_position=[[0.25,0.75], [0.25,0.75]])
-    
+                                 initial_position=[[0.5,0.6], [0.5,0.6]])
     
     quintiq = QuinticKernel(n_dim=sim_param.n_dim, radius_of_influence=water.h)
     
@@ -44,8 +43,3 @@ if __name__ == '__main__':
     sph.run_simulation()
     
     sph.clean_up_simulation()
-    
-    
-    
-    
-    

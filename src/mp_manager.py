@@ -57,5 +57,11 @@ class MP_Manager(object):
         self.shm['id_G'] = shared_memory.SharedMemory(create=True, name='id_G',
                                                       size=mem_array_1D)
         
+ 
+    def distribute_particle(self, sph):
         
-        
+        for attr in sph.__dict__:
+
+            if attr[-2::] == '_G':
+                sph.__dict__[attr[:-2]] = sph.__dict__[attr]
+            

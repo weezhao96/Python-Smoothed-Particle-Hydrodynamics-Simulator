@@ -3,6 +3,8 @@
 #%% Import
 
 import numpy as np
+import os
+import time
 
 #%% Class Definition
 
@@ -31,18 +33,27 @@ class SPH_Util(object):
         dtype_float = sph.sim_param.float_precision.get_np_dtype()
         dtype_int = sph.sim_param.int_precision.get_np_dtype()
         
-        #%% Assign Position
+        # Assign Position
         
         # Position
         sph.x_G = np.ndarray(shape_2D, dtype = dtype_float, buffer=sph.mp_manager.shm['x_G'].buf)
         
         self.recursion_build(sph, 0, [0 for i in range(n_dim)], n_per_dim, 0)
         
-        #%% Assign 1D and 2D States
-        
+        # Assign 1D States
         sph.id_G = np.ndarray(shape_1D, dtype = dtype_int, buffer=sph.mp_manager.shm['id_G'].buf)
         sph.id_G = np.array([i for i in range(shape_1D)])
+
+        sph.Ek_G = np.ndarray(shape_1D, dtype = dtype_int, buffer=sph.mp_manager.shm['Ek_G'].buf)
+        sph.Ek_G = np.array([0.0 for i in range(shape_1D)])
         
+        sph.Ep_G = np.ndarray(shape_1D, dtype = dtype_int, buffer=sph.mp_manager.shm['Ep_G'].buf)
+        sph.Ep_G = np.array([0.0 for i in range(shape_1D)])
+        
+        sph.E_G = np.ndarray(shape_1D, dtype = dtype_int, buffer=sph.mp_manager.shm['E_G'].buf)
+        sph.E_G = np.array([0.0 for i in range(shape_1D)])
+        
+        # Assign 2D States
         sph.v_G = np.ndarray(shape_2D, dtype = dtype_float, buffer=sph.mp_manager.shm['v_G'].buf)
         sph.v_G = np.array([0.0 for i in range(shape_2D)]) 
         
@@ -54,13 +65,8 @@ class SPH_Util(object):
         
         sph.p_G = np.ndarray(shape_1D, dtype = dtype_float, buffer=sph.mp_manager.shm['p_G'].buf)
         sph.p_G = np.array([1000.0 for i in range(shape_1D)])
-        
-        
-    @staticmethod
-    def perturb_particle(sph):
-        pass
+ 
     
-
     def recursion_build(self, sph, loop_depth, loop_index, loop_lim, i_particle):
         
         while loop_index[loop_depth] < loop_lim[loop_depth]:
@@ -82,8 +88,7 @@ class SPH_Util(object):
                 
             else:
                 
-                i_particle = self.recursion_build(sph, loop_depth + 1, loop_index, loop_lim,
-                                                  i_particle)
+                i_particle = self.recursion_build(sph, loop_depth+1, loop_index, loop_lim, i_particle)
                 
                 
             loop_index[loop_depth] += 1
@@ -92,14 +97,26 @@ class SPH_Util(object):
         loop_index[loop_depth] = 0
         
         return i_particle
-            
-            
+       
+    
+    @staticmethod
+    def perturb_particle(sph):
+        
+        # Define RNG Seed
+        pid = os.getpid() # Process ID
+        current_time = int(time.time()) # Current Time
+        rng = np.random.default_rng(current_time % pid)
+        
+        # Apply Perturbation
+        sph.x_G += 0.001 * rng.random(size=sph.x_G.shape) - 0.0005
+        
+    
     @staticmethod
     def plot(sph, plt, ax):
         
         plt.cla()
-        print(sph.x_G)
-        ax.plot(sph.x_G[::2], sph.x_G[1::2], '.', markersize=10) 
+
+        ax.plot(sph.x[::2], sph.x[1::2], '.', markersize=10) 
         ax.grid(True)
         ax.set_aspect('equal', 'box')
         
@@ -111,4 +128,9 @@ class SPH_Util(object):
         plt.title('$t = {0} \, s$'.format(sph.sim_param.t), usetex=True)
         
         plt.show()
-        plt.pause(0.05)
+        
+        if sph.sim_param.t == 0:
+            plt.pause(1.0)
+        else:
+            plt.pause(0.05)
+                        
