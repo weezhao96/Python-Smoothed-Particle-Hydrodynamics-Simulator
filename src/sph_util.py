@@ -63,6 +63,11 @@ class SPH_Util(object):
         
         sph.a_G = np.ndarray(shape_2D, dtype=dtype_float, buffer=sph.mp_manager.shm['a_G'].buf)
         sph.a_G = np.zeros(shape_2D, dtype=dtype_float)
+
+        # Assign Scalar
+        sph.E_total_G = 0.0
+        sph.Ek_total_G = 0.0
+        sph.Ep_total_G = 0.0
         
     
     def recursion_build(self, sph, loop_depth, loop_index, loop_lim, i_particle):

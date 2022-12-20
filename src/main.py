@@ -30,7 +30,7 @@ if __name__ == '__main__':
     
     sim_param = SimulationParameter(n_dim=2,
                                     sim_duration=0.2, dt=0.1,
-                                    float_precision=FloatType.FLOAT32, int_precision=IntType.INT16)
+                                    float_precision=FloatType.FLOAT64, int_precision=IntType.INT32)
     
     unit_cube = SimulationDomain(bounding_box=[[0.0,1.0], [0.0,1.0]],
                                  initial_position=np.array([[0.5,0.6], [0.5,0.6]]))
@@ -47,16 +47,12 @@ if __name__ == '__main__':
     
     for attr in sph.__dict__:
                 
-        if attr[-2:] == '_G' and attr != 'n_particle_G':
+        if attr[-2:] == '_G' and attr != 'n_particle_G' and attr[-7:] != 'total_G':
             print(' ')
             print('{}: {}'.format(attr[:-2], sph.__dict__[attr[:-2]].dtype))
-            
-            if np.any(sph.__dict__[attr]) != None:
-                print('{}: {}'.format(attr, sph.__dict__[attr].dtype))
+            print('{}: {}'.format(attr, sph.__dict__[attr].dtype))
                                                      
-        if attr == 'n_particle_G':
+        if attr == 'n_particle_G' or attr[-7:] == 'total_G':
             print(' ')
-            print('{}: {}'.format(attr[:-2], type(sph.n_particle)))
-            print('{}: {}'.format(attr, type(sph.n_particle_G)))
-
-    sph.clean_up_simulation()
+            print('{}: {}'.format(attr[:-2], type(sph.__dict__[attr[:-2]])))
+            print('{}: {}'.format(attr, type(sph.__dict__[attr])))

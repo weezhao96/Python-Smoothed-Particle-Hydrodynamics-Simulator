@@ -185,6 +185,8 @@ class BasicSPH(BaseSPH):
             print(' ')
 
             self.util.plot(self, plt, ax)
+
+        self.clean_up_simulation()
             
             
     def _boundary_check(self):
