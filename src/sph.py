@@ -132,9 +132,6 @@ class BaseSPH(object):
         self.Ep_total = np.sum(self.Ep)
         self.E_total = np.sum(self.E)
         
-        print('Total Kinetic Energy = {:.3f}'.format(self.Ek_total))
-        print('Total Potential Energy = {:.3f}'.format(self.Ep_total))
-        
         
     def clean_up_simulation(self):
         
@@ -150,41 +147,72 @@ class BasicSPH(BaseSPH):
     
     def run_simulation(self):
         
+        # Instantiate Particle State and Distribute to Process
         self.util.init_particle_state(self)
-        
-        self.util.perturb_particle(self)
-        
         self.mp_manager.distribute_particle(self)
-        
+
+        # Perturb Particle
+        self.util.perturb_particle(self)        
         self._boundary_check()
         
-        self._rescale_mass_density_pressure()
-        
-        print('t = {:.3f}'.format(self.sim_param.t))
+        # Map Neighbour
+        self._map_neighbour()
 
+        # Density Pressure Computation
+        self._density_pressure_computation()
+        self._rescale_mass_density_pressure()
+
+        # Acceleration Computation
+        self._accel_computation()
+
+        # Energy Computation
         self._energy_computation()
 
+        # Output Results
+        fig, ax = plt.subplots()
+        self.util.plot(self, plt, ax)
+
+        print('t = {:.3f}'.format(self.sim_param.t))
+        print('Total Kinetic Energy = {:.3f}'.format(self.Ek_total))
+        print('Total Potential Energy = {:.3f}'.format(self.Ep_total))
         print(' ')
 
-        fig, ax = plt.subplots()
-                
+        # First Timestepping
+        self._first_time_stepping()
+        self._boundary_check()
+
+        self.sim_param.t += self.sim_param.dt
+
+        # Timestep Looping            
         while (self.sim_param.t < self.sim_param.T - np.finfo(float).eps):
             
+            # Map Neighbour
+            self._map_neighbour()
+
+            # Density Pressure Computation
+            self._density_pressure_computation()
+
+            # Acceleration Computation
             self._accel_computation()
             
-            self._time_stepping()
+            # Energy Computation
+            self._energy_computation()
+            
+            # Output Results
+            fig, ax = plt.subplots()
+            self.util.plot(self, plt, ax)
 
+            print('t = {:.3f}'.format(self.sim_param.t))
+            print('Total Kinetic Energy = {:.3f}'.format(self.Ek_total))
+            print('Total Potential Energy = {:.3f}'.format(self.Ep_total))
+            print(' ')
+
+            # Time Stepping
+            self._time_stepping()
             self._boundary_check()
     
             self.sim_param.t += self.sim_param.dt
-            
-            print('t = {:.3f}'.format(self.sim_param.t))
 
-            self._energy_computation()
-            
-            print(' ')
-
-            self.util.plot(self, plt, ax)
 
         self.clean_up_simulation()
             
@@ -223,6 +251,7 @@ class BasicSPH(BaseSPH):
         self.a = 1.0 * np.random.rand(shape).astype(self.sim_param.float_precision.get_np_dtype()) - 0.5
 
         # self.a[n_dim-1:shape:n_dim] = self.a[n_dim-1:shape:n_dim] - self.atmospheric_model.g
+
 
     def _time_stepping(self):
         

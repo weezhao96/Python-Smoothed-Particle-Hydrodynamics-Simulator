@@ -111,7 +111,7 @@ class SPH_Util(object):
         rng = np.random.default_rng(current_time % pid)
         
         # Apply Perturbation
-        sph.x_G += 0.001 * rng.random(size=sph.x_G.shape) - 0.0005
+        sph.x += 0.001 * rng.random(size=sph.x.shape) - 0.0005
         
     
     @staticmethod
