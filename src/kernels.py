@@ -25,7 +25,11 @@ class BaseKernel(object):
         pass
 
     @abc.abstractmethod
-    def nable_W(q):
+    def nabla_W(q):
+        pass
+
+    @abc.abstractmethod
+    def nabla2_W(q):
         pass
     
     
@@ -62,3 +66,13 @@ class QuinticKernel(BaseKernel):
         nabla_W = self.alpha_dim / self.h * (0.625 * q4 - 3.75 * q3 + 7.5 * q2 - 5 * q)
         
         return nabla_W
+
+    def nabla2_W(self, q):
+        
+        q3 = np.power(q,3)
+        q2 = np.power(q,2)
+        h2 = np.power(self.h, 2)
+
+        nabla2_W = self.alpha_dim / h2 * (2.5 * q3 - 11.25 * q2 + 15.0 * q)
+        
+        return nabla2_W

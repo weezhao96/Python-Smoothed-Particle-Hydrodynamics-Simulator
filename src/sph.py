@@ -84,6 +84,7 @@ class BaseSPH(object):
     def _map_neighbour(self):
         pass
     
+    @abc.abstractmethod
     def _density_pressure_computation(self):
         pass
         
@@ -124,10 +125,12 @@ class BaseSPH(object):
         m = self.particle_model.m
         self.Ek = 0.5 * m * self.Ek
         self.Ep = m * self.atmospheric_model.g * self.Ep
+        self.E = self.Ek + self.Ep
         
         # Total Energy Computation
         self.Ek_total = np.sum(self.Ek)
         self.Ep_total = np.sum(self.Ep)
+        self.E_total = np.sum(self.E)
         
         print('Total Kinetic Energy = {:.3f}'.format(self.Ek_total))
         print('Total Potential Energy = {:.3f}'.format(self.Ep_total))
@@ -167,7 +170,6 @@ class BasicSPH(BaseSPH):
                 
         while (self.sim_param.t < self.sim_param.T - np.finfo(float).eps):
             
-
             self._accel_computation()
             
             self._time_stepping()
@@ -182,9 +184,7 @@ class BasicSPH(BaseSPH):
             
             print(' ')
 
-            
             self.util.plot(self, plt, ax)
-            
             
             
     def _boundary_check(self):
