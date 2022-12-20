@@ -43,7 +43,7 @@ if __name__ == '__main__':
     
     sph.run_simulation()
     
-    #sph.clean_up_simulation()
+    sph.clean_up_simulation()
     
     
     
