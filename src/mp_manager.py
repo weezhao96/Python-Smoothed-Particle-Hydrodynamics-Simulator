@@ -31,7 +31,7 @@ class MP_Manager(object):
         #%% Float
         
         # Array Memory Size
-        precision_byte = sim_param.float_precision.value
+        precision_byte = sim_param.float_prec.value
 
         # 2D Array
         mem_array_2D = int(n_particle_G * n_dim * precision_byte)
@@ -57,7 +57,7 @@ class MP_Manager(object):
         #%% Int
         
         # Array Memory Size
-        precision_byte = sim_param.int_precision.value
+        precision_byte = sim_param.int_prec.value
 
         mem_array_1D = int(n_particle_G * precision_byte)
         

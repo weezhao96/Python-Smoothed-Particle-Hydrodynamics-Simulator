@@ -168,7 +168,7 @@ class BaseSPH(object):
             
         # Ep <- z
         self.Ep = np.array(self.x[self.sim_param.n_dim-1::self.sim_param.n_dim],
-                           dtype=self.sim_param.float_precision.get_np_dtype())
+                           dtype=self.sim_param.float_prec.get_np_dtype())
 
         # Energy Computation
         m = self.particle_model.m
@@ -276,21 +276,21 @@ class BasicSPH(BaseSPH):
         index = 0
         
         # Bounding Box
-        box = self.sim_domain.bounding_box
+        domain = self.sim_domain.domain
         
         # Loop
         for i in range(self.n_particle_G):
             for dim in range(self.sim_param.n_dim):
                 
                 # Lower Bound
-                if (self.x[index] < box[dim][0] + self.particle_model.h):
+                if (self.x[index] <  domain[dim][0] + self.particle_model.h):
                     
-                    self.x[index] = box[dim][0] + self.particle_model.h
+                    self.x[index] =  domain[dim][0] + self.particle_model.h
                     self.v[index] *= -0.5
                     
-                elif (self.x[index] > box[dim][1] - self.particle_model.h):
+                elif (self.x[index] >  domain[dim][1] - self.particle_model.h):
                     
-                    self.x[index] = box[dim][1] - self.particle_model.h
+                    self.x[index] =  domain[dim][1] - self.particle_model.h
                     self.v[index] *= -0.5
                     
                 index += 1
@@ -301,7 +301,7 @@ class BasicSPH(BaseSPH):
         n_dim = self.sim_param.n_dim
         shape = self.a.shape[0]
         
-        self.a = 1.0 * np.random.rand(shape).astype(self.sim_param.float_precision.get_np_dtype()) - 0.5
+        self.a = 1.0 * np.random.rand(shape).astype(self.sim_param.float_prec.get_np_dtype()) - 0.5
 
         # self.a[n_dim-1:shape:n_dim] = self.a[n_dim-1:shape:n_dim] - self.atmospheric_model.g
 

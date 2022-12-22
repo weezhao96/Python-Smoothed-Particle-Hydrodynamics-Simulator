@@ -18,7 +18,7 @@ class BaseKernel(object):
         self.n_dim = n_dim
         self.h = radius_of_influence
         
-        self.alpha_dim = None
+        self.alpha_dim = float()
         self._set_alpha_dim(n_dim)
 
 

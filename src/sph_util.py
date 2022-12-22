@@ -44,8 +44,8 @@ class SPH_Util(object):
         shape_1D = sph.n_particle_G
         
         # Data Type
-        dtype_float = sph.sim_param.float_precision.get_np_dtype()
-        dtype_int = sph.sim_param.int_precision.get_np_dtype(signed=False)
+        dtype_float = sph.sim_param.float_prec.get_np_dtype()
+        dtype_int = sph.sim_param.int_prec.get_np_dtype(signed=False)
         
         # Assign Position
         sph.x_G = np.ndarray(shape_2D, dtype = dtype_float, buffer=sph.mp_manager.shm['x_G'].buf)        
@@ -141,8 +141,8 @@ class SPH_Util(object):
         
         plt.xlabel('$x$', fontsize=15, usetex=False)
         plt.ylabel('$y$', fontsize=15, usetex=False)
-        plt.xlim(sph.sim_domain.bounding_box[0])
-        plt.ylim(sph.sim_domain.bounding_box[1])
+        plt.xlim(sph.sim_domain.domain[0])
+        plt.ylim(sph.sim_domain.domain[1])
         
         plt.title('$t = {0:.3f} s$'.format(sph.sim_param.t), usetex=False)
         
