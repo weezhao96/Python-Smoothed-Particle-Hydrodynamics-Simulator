@@ -31,10 +31,11 @@ class SPH_Util(object):
         
         # Variables
         n_dim = sph.sim_param.n_dim
-        h = sph.particle_model.h
+        h = sph.kernel.h
+        lattice_distance = sph.kernel.radius_of_influence * sph.kernel.h
         
         # Compute No. of Particles
-        sph.n_particle_G, n_per_dim = sph.sim_domain.compute_no_of_particles(h, n_dim)
+        sph.n_particle_G, n_per_dim = sph.sim_domain.compute_no_of_particles(lattice_distance, n_dim)
         
         # Allocate share_memory space
         sph.mp_manager.assign_share_memory(sph.n_particle_G, sph.sim_param)
@@ -94,12 +95,13 @@ class SPH_Util(object):
             n_dim = sph.sim_param.n_dim
             index = i_particle * n_dim
             init_pos = sph.sim_domain.init_pos
+            lattice_distance = sph.kernel.radius_of_influence * sph.kernel.h
 
-            if loop_depth == n_dim - 1: 
+            if loop_depth == n_dim - 1:
                 
                 for dim in range(n_dim):
                     
-                    sph.x_G[index] = init_pos[dim][0] + sph.particle_model.h * loop_index[dim]
+                    sph.x_G[index] = init_pos[dim][0] + lattice_distance * loop_index[dim]
                     index += 1
                 
                 i_particle += 1

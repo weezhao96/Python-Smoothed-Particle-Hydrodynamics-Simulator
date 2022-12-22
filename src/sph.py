@@ -13,6 +13,7 @@ from kernels import BaseKernel, QuinticKernel
 from precision_enums import IntType, FloatType
 from mp_manager import MP_Manager
 from io_manager import IO_Manager
+from interaction import Interaction
 
 
 #%% Base Class Definition
@@ -132,6 +133,7 @@ class BaseSPH(object):
     def _boundary_check(self):
         pass
     
+    @abc.abstractmethod
     def _map_neighbour(self):
         pass
     
@@ -167,8 +169,7 @@ class BaseSPH(object):
             self.Ek[i] = np.dot(v,v)
             
         # Ep <- z
-        self.Ep = np.array(self.x[self.sim_param.n_dim-1::self.sim_param.n_dim],
-                           dtype=self.sim_param.float_prec.get_np_dtype())
+        self.Ep = self.x[self.sim_param.n_dim-1::self.sim_param.n_dim]
 
         # Energy Computation
         m = self.particle_model.m
@@ -209,7 +210,14 @@ class BasicSPH(BaseSPH):
         self._boundary_check()
         
         # Map Neighbour
-        self._map_neighbour()
+        interaction_set = []
+
+        for i in range(self.n_particle):
+
+            new_interaction = Interaction(self.id[i], self.util.kissing_num, self.sim_param)
+            interaction_set.append(new_interaction)
+
+        self._map_neighbour(interaction_set)
 
         # Density Pressure Computation
         self._density_pressure_computation()
@@ -240,7 +248,7 @@ class BasicSPH(BaseSPH):
         while (self.sim_param.t < self.sim_param.T - np.finfo(float).eps):
             
             # Map Neighbour
-            self._map_neighbour()
+            self._map_neighbour(interaction_set)
 
             # Density Pressure Computation
             self._density_pressure_computation()
@@ -277,25 +285,58 @@ class BasicSPH(BaseSPH):
         
         # Bounding Box
         domain = self.sim_domain.domain
+        boundary_radius = self.kernel.radius_of_influence * self.kernel.h
         
         # Loop
         for i in range(self.n_particle_G):
             for dim in range(self.sim_param.n_dim):
                 
                 # Lower Bound
-                if (self.x[index] <  domain[dim][0] + self.particle_model.h):
+                if (self.x[index] <  domain[dim][0] + boundary_radius):
                     
-                    self.x[index] =  domain[dim][0] + self.particle_model.h
+                    self.x[index] =  domain[dim][0] + boundary_radius
                     self.v[index] *= -0.5
                     
-                elif (self.x[index] >  domain[dim][1] - self.particle_model.h):
+                elif (self.x[index] >  domain[dim][1] - boundary_radius):
                     
-                    self.x[index] =  domain[dim][1] - self.particle_model.h
+                    self.x[index] =  domain[dim][1] - boundary_radius
                     self.v[index] *= -0.5
                     
                 index += 1
                 
     
+    def _map_neighbour(self, inter_set: list[Interaction]):
+        
+        n_dim = self.sim_param.n_dim
+
+        # Reset Interaction
+        for i in range(self.n_particle):
+            inter_set[i].reset()
+            
+        # Compute Interaction
+
+        for i in range(self.n_particle):
+
+            id_i = self.id[i]
+            index_i = i * n_dim
+
+            for j in range(i+1, self.n_particle):
+
+                id_j = self.id[j]
+                index_j = j * n_dim
+
+                dr = self.x[index_i:index_i+n_dim] - self.x[index_j:index_j+n_dim]
+                q = np.linalg.norm(dr, ord=2) / self.kernel.h
+
+                if q < self.kernel.radius_of_influence:
+                    
+                    dv = self.v[index_i:index_i+n_dim] - self.v[index_j:index_j+n_dim]
+
+                    inter_set[i].add_neighbour(id_j, q, dr, dv)
+                    inter_set[j].add_neighbour(id_i, -q, -dr, -dv)
+
+
+
     def _accel_computation(self):
         
         n_dim = self.sim_param.n_dim

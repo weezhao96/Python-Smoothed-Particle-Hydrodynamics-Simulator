@@ -11,12 +11,14 @@ class BaseKernel(object):
 
     n_dim: int
     h: float
+    radius_of_influence: float
     alpha_dim: float
     
-    def __init__(self, n_dim: int, radius_of_influence: float):
+    def __init__(self, n_dim: int, smoothing_length: float, radius_of_influence: float):
         
         self.n_dim = n_dim
-        self.h = radius_of_influence
+        self.h = smoothing_length
+        self.radius_of_influence = radius_of_influence
         
         self.alpha_dim = float()
         self._set_alpha_dim(n_dim)
@@ -43,9 +45,9 @@ class BaseKernel(object):
 
 class QuinticKernel(BaseKernel):
     
-    def __init__(self, n_dim: int, radius_of_influence: float):
+    def __init__(self, n_dim: int, smoothing_length: float, radius_of_influence: float):
         
-        super().__init__(n_dim, radius_of_influence)
+        super().__init__(n_dim, smoothing_length, radius_of_influence)
         
     def _set_alpha_dim(self, n_dim: int):
         

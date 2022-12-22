@@ -18,19 +18,16 @@ class Atmosphere(object):
 class Particle(object):
 
     # Type Annotation
-    h: float
     rho_0: float
     mu: float
     gamma: float
     c: float
     m: float
     
-    def __init__(self, radius_of_influence: float,
-                 resting_density: float, viscosity: float,
+    def __init__(self, resting_density: float, viscosity: float,
                  specific_heat_ratio: float, speed_of_sound: float):
     
         # Simulation Particle Parameters
-        self.h = radius_of_influence # Particle Radius of Influence
         self.rho_0 = resting_density # Resting Density
         self.mu = viscosity # Viscosity
         self.gamma = specific_heat_ratio # Specific Heat Ratio

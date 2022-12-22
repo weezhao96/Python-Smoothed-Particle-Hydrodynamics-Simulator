@@ -23,19 +23,18 @@ if __name__ == '__main__':
     earth = Atmosphere(gravitational_strength=9.81)
     
     # Particle
-    water = Particle(radius_of_influence=0.01,
-                     resting_density=1000.0, viscosity=1.0,
+    water = Particle(resting_density=1000.0, viscosity=1.0,
                      specific_heat_ratio=7.0, speed_of_sound=1480.0)
     
     #%% Simulation Definition
     
-    sim_param = SimulationParameter(n_dim=2, sim_duration=0.2, dt=0.1,
+    sim_param = SimulationParameter(n_dim=2, sim_duration=3.0, dt=0.1,
                                     float_precision=FloatType.FLOAT32, int_precision=IntType.INT16)
     
     unit_cube = SimulationDomain(bounding_box=[[0.0,1.0], [0.0,1.0]],
                                  initial_position=[[0.5,0.6], [0.5,0.6]])
     
-    quintiq = QuinticKernel(n_dim=sim_param.n_dim, radius_of_influence=water.h)
+    quintiq = QuinticKernel(n_dim=sim_param.n_dim, smoothing_length=0.01, radius_of_influence=2.0)
     
     #%% Manager Definition
     
