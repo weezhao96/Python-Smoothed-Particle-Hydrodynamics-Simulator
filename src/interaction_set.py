@@ -47,7 +47,7 @@ class interaction_set(object):
         self.index_2D += self.n_dim
 
 
-    def loop_reset(self):
+    def reset(self):
 
         self.n_neighbour = 0
         self.index_1D = 0
