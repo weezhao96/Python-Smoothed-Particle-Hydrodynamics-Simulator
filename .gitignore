@@ -2,3 +2,4 @@
 report/
 src/__pycache__/
 src/temp.py
+.vscode/

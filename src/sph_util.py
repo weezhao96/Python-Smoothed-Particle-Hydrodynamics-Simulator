@@ -1,17 +1,31 @@
-# SPH Utilities
+# SPH_Util
 
 #%% Import
 
+from __future__ import annotations
+
 import numpy as np
+import matplotlib.pyplot as plt
 import os
 import time
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from sph import BaseSPH
+
 
 #%% Class Definition
 
 class SPH_Util(object):
+
+    # Type Annotation
+    kissing_num: list[int]
     
     def __init__(self):
-        pass
+        
+        self.kissing_num = [0, 2, 6, 12, 24]
+        
     
     def init_particle_state(self, sph):
         
@@ -70,7 +84,9 @@ class SPH_Util(object):
         sph.Ep_total_G = 0.0
         
     
-    def recursion_build(self, sph, loop_depth, loop_index, loop_lim, i_particle):
+    def recursion_build(self, sph: BaseSPH, loop_depth: int,
+                        loop_index: list[int], loop_lim: list[int],
+                        i_particle: int) -> int:
         
         while loop_index[loop_depth] < loop_lim[loop_depth]:
             
@@ -103,7 +119,7 @@ class SPH_Util(object):
        
     
     @staticmethod
-    def perturb_particle(sph):
+    def perturb_particle(sph: BaseSPH):
         
         # Define RNG Seed
         pid = os.getpid() # Process ID
@@ -115,11 +131,11 @@ class SPH_Util(object):
         
     
     @staticmethod
-    def plot(sph, plt, ax):
+    def plot(sph: BaseSPH, plt, ax):
         
         plt.cla()
 
-        ax.plot(sph.x[::2], sph.x[1::2], '.', markersize=10) 
+        ax.plot(sph.x[0::2], sph.x[1::2], '.', markersize=10) 
         ax.grid(True)
         ax.set_aspect('equal', 'box')
         
@@ -128,11 +144,11 @@ class SPH_Util(object):
         plt.xlim(sph.sim_domain.bounding_box[0])
         plt.ylim(sph.sim_domain.bounding_box[1])
         
-        plt.title('$t = {0:.3f} \, s$'.format(sph.sim_param.t), usetex=False)
+        plt.title('$t = {0:.3f} s$'.format(sph.sim_param.t), usetex=False)
         
         plt.show()
         
-        if sph.sim_param.t == 0:
+        if sph.sim_param.t == 0.0:
             plt.pause(1.0)
         else:
             plt.pause(0.05)

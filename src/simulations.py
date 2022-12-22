@@ -12,16 +12,25 @@ from precision_enums import IntType, FloatType
 #%% Simulation Parameters
 
 class SimulationParameter(object):
+
+    # Type Annotation
+    n_dim: int
+    T: float
+    dt: float
+    t: float
+    float_precision: FloatType
+    int_precision: IntType
     
-    def __init__(self, n_dim, sim_duration, dt = None,
-                 float_precision=FloatType.FLOAT64,
-                 int_precision=IntType.INT32):
+    def __init__(self, n_dim: int,
+                 sim_duration: float, dt: float = 0.1,
+                 float_precision: FloatType = FloatType.FLOAT64,
+                 int_precision: IntType = IntType.INT32):
     
         # Simulation Parameters
         self.n_dim = n_dim # No. of Spatial Dimension
         self.T = sim_duration # Simulation Duration
         self.dt = dt # Simulation Time Step
-        self.t = 0 # Current Simulation Time
+        self.t = 0.0 # Current Simulation Time
         self.float_precision = float_precision
         self.int_precision = int_precision 
             
@@ -29,8 +38,12 @@ class SimulationParameter(object):
 #%% Simulation Domain
 
 class SimulationDomain(object):
+
+    # Type Annotation
+    bounding_box: list[list[float]]
+    init_pos: list[list[float]]
     
-    def __init__(self, bounding_box, initial_position):
+    def __init__(self, bounding_box:list[list[float]] , initial_position:list[list[float]]):
     
         # Simulation Domain
         self.bounding_box = bounding_box
@@ -39,7 +52,7 @@ class SimulationDomain(object):
         self.init_pos = initial_position
         
         
-    def compute_no_of_particles(self, h, n_dim):
+    def compute_no_of_particles(self, h: float, n_dim: int) -> tuple[int, list[int]]:
         
         # Bound Checking
         for dim in range(n_dim):

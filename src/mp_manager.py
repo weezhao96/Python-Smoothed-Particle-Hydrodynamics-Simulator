@@ -5,18 +5,25 @@
 import multiprocessing as mp
 import multiprocessing.shared_memory as shared_memory
 
+from simulations import SimulationParameter
+
+
 #%% Main Class
 
 class MP_Manager(object):
     
-    def __init__(self, n_process):
+    # Type Annotation
+    n_process: int
+    shm: dict[str, shared_memory.SharedMemory]
+
+    def __init__(self, n_process: int):
     
         # Process Attributes
         self.n_process = n_process
         self.shm = {}
         
         
-    def assign_share_memory(self, n_particle_G, sim_param):
+    def assign_share_memory(self, n_particle_G: int, sim_param: SimulationParameter):
         
         # Sim Param
         n_dim = sim_param.n_dim
@@ -58,10 +65,6 @@ class MP_Manager(object):
                                                       size=mem_array_1D)
         
  
-    def distribute_particle(self, sph):
-        
-        for attr in sph.__dict__:
-
-            if attr[-2:] == '_G':
-                sph.__dict__[attr[:-2]] = sph.__dict__[attr]
+    def distribute_particle(self, data, data_G):
+        pass
             

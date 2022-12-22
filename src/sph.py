@@ -6,6 +6,11 @@ import numpy as np
 import abc
 import matplotlib.pyplot as plt
 
+from sph_util import SPH_Util
+from models import Atmosphere, Particle
+from simulations import SimulationParameter, SimulationDomain
+from kernels import BaseKernel, QuinticKernel
+from precision_enums import IntType, FloatType
 from mp_manager import MP_Manager
 from io_manager import IO_Manager
 
@@ -13,10 +18,56 @@ from io_manager import IO_Manager
 #%% Base Class Definition
 
 class BaseSPH(object):
+
+    # Type Annotation
+    util: SPH_Util
+
+    atmospheric_model: Atmosphere
+    particle_model: Particle
+
+    sim_param: SimulationParameter
+    sim_domain: SimulationDomain
+
+    kernel: BaseKernel
+
+    mp_manager: MP_Manager
+    io_manager: IO_Manager
+
+    n_particle_G: int
+    id_G: np.ndarray
+    x_G: np.ndarray
+    v_G: np.ndarray
+    a_G: np.ndarray
+    rho_G: np.ndarray
+    p_G: np.ndarray
+
+    n_particle: int
+    id: np.ndarray
+    x: np.ndarray
+    v: np.ndarray
+    a: np.ndarray
+    rho: np.ndarray
+    p: np.ndarray
+
+    Ek_G: np.ndarray
+    Ep_G: np.ndarray
+    E_G: np.ndarray
+    Ek_total_G: np.float_
+    Ep_total_G: np.float_
+    E_total_G: np.float_
+
+    Ek: np.ndarray
+    Ep: np.ndarray
+    E: np.ndarray
+    Ek_total: np.float_
+    Ep_total: np.float_
+    E_total: np.float_
     
-    def __init__(self, utility, atmospheric_model, particle_model,
-                 sim_param, sim_domain, kernel,
-                 n_process, output_path):
+    def __init__(self, utility: SPH_Util,
+                 atmospheric_model: Atmosphere, particle_model: Particle,
+                 sim_param: SimulationParameter, sim_domain: SimulationDomain,
+                 kernel: BaseKernel,
+                 mp_manager: MP_Manager, io_manager: IO_Manager):
         
         # Utility Module
         self.util = utility
@@ -33,8 +84,8 @@ class BaseSPH(object):
         self.kernel = kernel
         
         # Manager
-        self.mp_manager = MP_Manager(n_process)
-        self.io_manager = IO_Manager(output_path)
+        self.mp_manager = mp_manager
+        self.io_manager = io_manager
         
         # Global State Variables
         self.n_particle_G = None # No. of Partiles
@@ -46,7 +97,7 @@ class BaseSPH(object):
         self.p_G = None # Particle Pressure
         
         # Local State Variables
-        self.n_particle = None
+        self.n_particle = None # No. of Partiles
         self.id = None # Particle ID
         self.x = None # Particle Position
         self.v = None # Particle Velocity
@@ -89,10 +140,8 @@ class BaseSPH(object):
         pass
         
     def _rescale_mass_density_pressure(self):
-        
-        dtype_float = self.sim_param.float_precision.get_np_dtype()
-        
-        self.particle_model.m = dtype_float(self.particle_model.m)
+                
+        self.particle_model.m = 1.0
     
     @abc.abstractmethod
     def _accel_computation(self):
@@ -149,7 +198,11 @@ class BasicSPH(BaseSPH):
         
         # Instantiate Particle State and Distribute to Process
         self.util.init_particle_state(self)
-        self.mp_manager.distribute_particle(self)
+
+        for attr in self.__dict__:
+
+            if attr[-2:] == '_G':
+                self.__dict__[attr[:-2]] = self.__dict__[attr]
 
         # Perturb Particle
         self.util.perturb_particle(self)        
@@ -253,10 +306,12 @@ class BasicSPH(BaseSPH):
         # self.a[n_dim-1:shape:n_dim] = self.a[n_dim-1:shape:n_dim] - self.atmospheric_model.g
 
 
+    def _first_time_stepping(self):
+        pass
+
+
     def _time_stepping(self):
         
         self.v = self.v + self.a * self.sim_param.dt
         #self.v = 1.0 * np.random.rand(self.n_particle * self.sim_param.n_dim) - 0.5
         self.x = self.x + self.v * self.sim_param.dt
-        
-        

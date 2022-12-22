@@ -18,7 +18,7 @@ class IntType(Enum):
     INT32 = 4
     INT64 = 8
     
-    def get_np_dtype(self, signed=True):
+    def get_np_dtype(self, signed: bool = True):
         
         if signed:
             

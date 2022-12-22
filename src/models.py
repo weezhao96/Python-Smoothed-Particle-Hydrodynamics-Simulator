@@ -3,8 +3,11 @@
 #%% Atmospheric Model
 
 class Atmosphere(object):
+
+    # Type Annotation
+    g: float
     
-    def __init__(self, gravitational_strength):
+    def __init__(self, gravitational_strength: float):
     
         # Simulation Atmospheric and Thermodynamic Parameters
         self.g = gravitational_strength # Gravitational Strength
@@ -13,10 +16,18 @@ class Atmosphere(object):
 #%% Particle Model
 
 class Particle(object):
+
+    # Type Annotation
+    h: float
+    rho_0: float
+    mu: float
+    gamma: float
+    c: float
+    m: float
     
-    def __init__(self, radius_of_influence,
-                 resting_density, viscosity,
-                 specific_heat_ratio, speed_of_sound):
+    def __init__(self, radius_of_influence: float,
+                 resting_density: float, viscosity: float,
+                 specific_heat_ratio: float, speed_of_sound: float):
     
         # Simulation Particle Parameters
         self.h = radius_of_influence # Particle Radius of Influence
