@@ -88,38 +88,38 @@ class BaseSPH(object):
         self.io_manager = io_manager
         
         # Global State Variables
-        self.n_particle_G = None # No. of Partiles
-        self.id_G = None # Particle ID
-        self.x_G = None # Particle Position
-        self.v_G = None # Particle Velocity
-        self.a_G = None # Particle Acceleration
-        self.rho_G = None # Particle Density
-        self.p_G = None # Particle Pressure
+        self.n_particle_G = int() # No. of Partiles
+        self.id_G = np.array([]) # Particle ID
+        self.x_G = np.array([]) # Particle Position
+        self.v_G = np.array([]) # Particle Velocity
+        self.a_G = np.array([]) # Particle Acceleration
+        self.rho_G = np.array([]) # Particle Density
+        self.p_G = np.array([]) # Particle Pressure
         
         # Local State Variables
-        self.n_particle = None # No. of Partiles
-        self.id = None # Particle ID
-        self.x = None # Particle Position
-        self.v = None # Particle Velocity
-        self.a = None # Particle Acceleration
-        self.rho = None # Particle Density
-        self.p = None # Particle Pressure
+        self.n_particle = int() # No. of Partiles
+        self.id = np.array([]) # Particle ID
+        self.x = np.array([]) # Particle Position
+        self.v = np.array([]) # Particle Velocity
+        self.a = np.array([]) # Particle Acceleration
+        self.rho = np.array([]) # Particle Density
+        self.p = np.array([]) # Particle Pressure
         
         # Global Energy Variables
-        self.Ek_G = None # Particle Kinetic Energy
-        self.Ep_G = None # Particle Potential Energy
-        self.E_G = None # Particle Total Energy
-        self.Ek_total_G = None # Total Kinetic Energy
-        self.Ep_total_G = None # Total Potential Energy
-        self.E_total_G = None # Total Energy
+        self.Ek_G = np.array([]) # Particle Kinetic Energy
+        self.Ep_G = np.array([]) # Particle Potential Energy
+        self.E_G = np.array([]) # Particle Total Energy
+        self.Ek_total_G = np.float_() # Total Kinetic Energy
+        self.Ep_total_G = np.float_() # Total Potential Energy
+        self.E_total_G = np.float_() # Total Energy
         
         # Local Energy Variables
-        self.Ek = None # Particle Kinetic Energy
-        self.Ep = None # Particle Potential Energy
-        self.E = None # Particle Total Energy
-        self.Ek_total = None # Total Kinetic Energy
-        self.Ep_total = None # Total Potential Energy
-        self.E_total = None # Total Energy
+        self.Ek = np.array([]) # Particle Kinetic Energy
+        self.Ep = np.array([]) # Particle Potential Energy
+        self.E = np.array([]) # Particle Total Energy
+        self.Ek_total = np.float_() # Total Kinetic Energy
+        self.Ep_total = np.float_() # Total Potential Energy
+        self.E_total = np.float_() # Total Energy
         
     
     #%% Simulation Algorithm
