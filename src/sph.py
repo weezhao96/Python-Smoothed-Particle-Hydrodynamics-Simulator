@@ -141,10 +141,10 @@ class BaseSPH(object):
     def _density_pressure_computation(self):
         pass
         
+    @abc.abstractmethod   
     def _rescale_mass_density_pressure(self):
-                
-        self.particle_model.m = 1.0
-    
+        pass
+
     @abc.abstractmethod
     def _accel_computation(self):
         pass
@@ -220,11 +220,12 @@ class BasicSPH(BaseSPH):
         self._map_neighbour(interaction_set)
 
         # Density Pressure Computation
-        self._density_pressure_computation()
+        self._density_pressure_computation(interaction_set)
         self._rescale_mass_density_pressure()
+        self._density_pressure_computation(interaction_set)
 
         # Acceleration Computation
-        self._accel_computation()
+        self._accel_computation(interaction_set)
 
         # Energy Computation
         self._energy_computation()
@@ -251,16 +252,15 @@ class BasicSPH(BaseSPH):
             self._map_neighbour(interaction_set)
 
             # Density Pressure Computation
-            self._density_pressure_computation()
+            self._density_pressure_computation(interaction_set)
 
             # Acceleration Computation
-            self._accel_computation()
+            self._accel_computation(interaction_set)
             
             # Energy Computation
             self._energy_computation()
             
             # Output Results
-            fig, ax = plt.subplots()
             self.util.plot(self, plt, ax)
 
             print('t = {:.3f}'.format(self.sim_param.t))
@@ -288,7 +288,7 @@ class BasicSPH(BaseSPH):
         boundary_radius = self.kernel.radius_of_influence * self.kernel.h
         
         # Loop
-        for i in range(self.n_particle_G):
+        for i in range(self.n_particle):
             for dim in range(self.sim_param.n_dim):
                 
                 # Lower Bound
@@ -325,34 +325,83 @@ class BasicSPH(BaseSPH):
                 id_j = self.id[j]
                 index_j = j * n_dim
 
-                dr = self.x[index_i:index_i+n_dim] - self.x[index_j:index_j+n_dim]
+                dr = self.x[index_i : index_i+n_dim] - self.x[index_j : index_j+n_dim]
                 q = np.linalg.norm(dr, ord=2) / self.kernel.h
 
                 if q < self.kernel.radius_of_influence:
                     
-                    dv = self.v[index_i:index_i+n_dim] - self.v[index_j:index_j+n_dim]
+                    dv = self.v[index_i : index_i+n_dim] - self.v[index_j : index_j+n_dim]
 
                     inter_set[i].add_neighbour(id_j, q, dr, dv)
-                    inter_set[j].add_neighbour(id_i, -q, -dr, -dv)
+                    inter_set[j].add_neighbour(id_i, q, -dr, -dv)
 
 
+    def _density_pressure_computation(self, inter_set: list[Interaction]):
 
-    def _accel_computation(self):
+        # Density
+        for i in range(self.n_particle):
+            
+            index = inter_set[i].index_1D
+
+            # Kernel
+            W = self.kernel.W(inter_set[i].q[:index])
+
+            # Density
+            self.rho[i] = np.sum(self.particle_model.m * W) + self.particle_model.m * self.kernel.W(np.array([0.0]))
+
+        # Pressure
+        k = self.particle_model.c ** 2 * self.particle_model.rho_0 / self.particle_model.gamma
+        self.p = k * (np.power((self.rho / self.particle_model.rho_0), self.particle_model.gamma) - 1) 
+
+
+    def _rescale_mass_density_pressure(self):
         
+        self.particle_model.m = self.n_particle * self.particle_model.rho_0 / np.sum(self.rho)
+
+
+    def _accel_computation(self, inter_set: list[Interaction]):
+        
+        # Parameter
         n_dim = self.sim_param.n_dim
         shape = self.a.shape[0]
         
-        self.a = 1.0 * np.random.rand(shape).astype(self.sim_param.float_prec.get_np_dtype()) - 0.5
+        # Pressure Computation
+        a_p = np.zeros(shape=shape, dtype=self.sim_param.float_prec.get_np_dtype())
 
-        # self.a[n_dim-1:shape:n_dim] = self.a[n_dim-1:shape:n_dim] - self.atmospheric_model.g
+        for i in range(self.n_particle):
+            
+            index_1D_i = i
+            index_2D_i = i * n_dim
+
+            p_rho_i = self.p[index_1D_i] / self.rho[index_1D_i] ** 2
+
+            for j in range(inter_set[i].n_neighbour):
+                
+                # 1D and 2D Index
+                index_1D_j = inter_set[i].id_neighbour[j]
+                index_2D_j = index_1D_j * n_dim
+
+                # Pressure
+                q = inter_set[i].q[j]
+                nabla_W = self.kernel.nabla_W(q)
+                p_scale = -self.particle_model.m * nabla_W
+                p_rho = p_rho_i + self.p[index_1D_j] / self.rho[index_1D_j] ** 2
+
+                for dim in range(n_dim):
+                    unit_vec = inter_set[i].dr[j * n_dim + dim] / (q * self.kernel.h)
+                    a_p[index_2D_i + dim] = a_p[index_2D_i + dim] + unit_vec * p_rho * p_scale
+
+        self.a = a_p
+        self.a[n_dim-1::n_dim] = self.a[n_dim-1::n_dim] - self.atmospheric_model.g
 
 
     def _first_time_stepping(self):
-        pass
+        
+        self.v = self.v + 0.5 * self.sim_param.dt * self.a
+        self.x = self.x + self.sim_param.dt * self.v
 
 
     def _time_stepping(self):
         
         self.v = self.v + self.a * self.sim_param.dt
-        #self.v = 1.0 * np.random.rand(self.n_particle * self.sim_param.n_dim) - 0.5
         self.x = self.x + self.v * self.sim_param.dt

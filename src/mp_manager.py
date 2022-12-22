@@ -34,7 +34,7 @@ class MP_Manager(object):
         precision_byte = sim_param.float_prec.value
 
         # 2D Array
-        mem_array_2D = int(n_particle_G * n_dim * precision_byte)
+        mem_array_2D = n_particle_G * n_dim * precision_byte
                 
         self.shm['x_G'] = shared_memory.SharedMemory(create=True, name='x_G', size=mem_array_2D)
         self.shm['v_G'] = shared_memory.SharedMemory(create=True, name='v_G', size=mem_array_2D)
