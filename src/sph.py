@@ -344,7 +344,7 @@ class BasicSPH(BaseSPH):
             index = inter_set[i].index_1D
 
             # Kernel
-            W = self.kernel.W(inter_set[i].q[:index])
+            W = self.kernel.W(inter_set[i].q)
 
             # Density
             self.rho[i] = np.sum(self.particle_model.m * W) + self.particle_model.m * self.kernel.W(np.array([0.0]))
