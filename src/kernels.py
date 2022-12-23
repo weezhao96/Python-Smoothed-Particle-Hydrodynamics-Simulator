@@ -71,6 +71,7 @@ class QuinticKernel(BaseKernel):
         
         return nabla_W
 
+
     def nabla2_W(self, q: np.ndarray) -> np.ndarray:
         
         q_m = q - 1.7

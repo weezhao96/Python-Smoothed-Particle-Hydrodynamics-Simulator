@@ -3,16 +3,15 @@
 #%% Import
 
 from __future__ import annotations
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from sph import BaseSPH
 
 import numpy as np
 import matplotlib.pyplot as plt
 import os
 import time
-
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from sph import BaseSPH
 
 
 #%% Class Definition
@@ -31,7 +30,6 @@ class SPH_Util(object):
         
         # Variables
         n_dim = sph.sim_param.n_dim
-        h = sph.kernel.h
         lattice_distance = sph.kernel.radius_of_influence * sph.kernel.h
         
         # Compute No. of Particles
@@ -129,7 +127,8 @@ class SPH_Util(object):
         rng = np.random.default_rng(current_time % pid)
         
         # Apply Perturbation
-        sph.x += 0.001 * rng.random(size=sph.x.shape) - 0.0005
+        lattice = sph.kernel.radius_of_influence * sph.kernel.h
+        sph.x += lattice * (0.2 * rng.random(size=sph.x.shape) - 0.1)
         
     
     @staticmethod

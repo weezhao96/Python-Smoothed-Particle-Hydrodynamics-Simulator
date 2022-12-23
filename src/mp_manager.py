@@ -2,10 +2,10 @@
 
 #%% Import
 
+from simulations import SimulationParameter
+
 import multiprocessing as mp
 import multiprocessing.shared_memory as shared_memory
-
-from simulations import SimulationParameter
 
 
 #%% Main Class

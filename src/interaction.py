@@ -25,7 +25,7 @@ class Interaction(object):
         # Helper Variables
         self.n_dim = sim_param.n_dim
 
-        shape_1D = kissing_number[self.n_dim]
+        shape_1D = int(1.5 * kissing_number[self.n_dim])
         shape_2D = shape_1D * self.n_dim
 
         float_dtype = sim_param.float_prec.get_np_dtype()

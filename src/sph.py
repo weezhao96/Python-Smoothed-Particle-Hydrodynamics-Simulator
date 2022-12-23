@@ -2,10 +2,6 @@
 
 #%% Import
 
-import numpy as np
-import abc
-import matplotlib.pyplot as plt
-
 from sph_util import SPH_Util
 from models import Atmosphere, Particle
 from simulations import SimulationParameter, SimulationDomain
@@ -14,6 +10,10 @@ from precision_enums import IntType, FloatType
 from mp_manager import MP_Manager
 from io_manager import IO_Manager
 from interaction import Interaction
+
+import numpy as np
+import abc
+import matplotlib.pyplot as plt
 
 
 #%% Base Class Definition
@@ -344,7 +344,7 @@ class BasicSPH(BaseSPH):
             index = inter_set[i].index_1D
 
             # Kernel
-            W = self.kernel.W(inter_set[i].q)
+            W = self.kernel.W(inter_set[i].q[:index])
 
             # Density
             self.rho[i] = np.sum(self.particle_model.m * W) + self.particle_model.m * self.kernel.W(np.array([0.0]))

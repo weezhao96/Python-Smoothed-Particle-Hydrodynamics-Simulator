@@ -29,10 +29,10 @@ if __name__ == '__main__':
     #%% Simulation Definition
     
     sim_param = SimulationParameter(n_dim=2, sim_duration=5.0, dt=0.001,
-                                    float_precision=FloatType.FLOAT32, int_precision=IntType.INT32)
+                                    float_precision=FloatType.FLOAT64, int_precision=IntType.INT32)
     
     unit_cube = SimulationDomain(bounding_box=[[0.0,1.0], [0.0,1.0]],
-                                 initial_position=[[0.1,0.5], [0.2,0.2]])
+                                 initial_position=[[0.1,0.5], [0.1,0.2]])
     
     quintiq = QuinticKernel(n_dim=sim_param.n_dim, smoothing_length=0.01, radius_of_influence=2.0)
     

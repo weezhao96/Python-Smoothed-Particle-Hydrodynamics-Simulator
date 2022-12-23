@@ -2,11 +2,11 @@
 
 #%% Import
 
-import numpy as np
-import math
-
 from functools import reduce
 from precision_enums import IntType, FloatType
+
+import numpy as np
+import math
 
 
 #%% Simulation Parameters
