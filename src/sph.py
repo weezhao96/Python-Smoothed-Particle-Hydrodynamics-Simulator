@@ -141,9 +141,9 @@ class BaseSPH(object):
     def _density_pressure_computation(self):
         pass
         
-    @abc.abstractmethod   
     def _rescale_mass_density_pressure(self):
-        pass
+
+        self.particle_model.m = self.n_particle * self.particle_model.rho_0 / np.sum(self.rho)
 
     @abc.abstractmethod
     def _accel_computation(self):
@@ -354,12 +354,6 @@ class BasicSPH(BaseSPH):
         # Pressure
         k = self.particle_model.c ** 2 * self.particle_model.rho_0 / self.particle_model.gamma
         self.p = k * (np.power((self.rho / self.particle_model.rho_0), self.particle_model.gamma) - 1) 
-
-
-    def _rescale_mass_density_pressure(self):
-        
-        self.particle_model.m = self.n_particle * self.particle_model.rho_0 / np.sum(self.rho)
-
 
     def _accel_computation(self, inter_set: list[Interaction]):
         
