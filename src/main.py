@@ -2,8 +2,6 @@
 
 #%% Library
 
-import numpy as np
-
 from models import Atmosphere, Particle
 from simulations import SimulationParameter, SimulationDomain
 from kernels import QuinticKernel
@@ -12,6 +10,7 @@ from precision_enums import IntType, FloatType
 from mp_manager import MP_Manager
 from io_manager import IO_Manager
 
+import numpy as np
 
 #%% Main
 

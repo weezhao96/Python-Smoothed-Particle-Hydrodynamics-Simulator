@@ -347,7 +347,9 @@ class BasicSPH(BaseSPH):
             W = self.kernel.W(inter_set[i].q[:index])
 
             # Density
-            self.rho[i] = np.sum(self.particle_model.m * W) + self.particle_model.m * self.kernel.W(np.array([0.0]))
+            self.rho[i] = np.sum(self.particle_model.m * W)
+
+        self.rho = self.rho + self.particle_model.m * self.kernel.W(np.array([0.0]))
 
         # Pressure
         k = self.particle_model.c ** 2 * self.particle_model.rho_0 / self.particle_model.gamma
@@ -378,20 +380,22 @@ class BasicSPH(BaseSPH):
             for j in range(inter_set[i].n_neighbour):
                 
                 # 1D and 2D Index
-                index_1D_j = inter_set[i].id_neighbour[j]
-                index_2D_j = index_1D_j * n_dim
+                id_j = inter_set[i].id_neighbour[j]
 
                 # Pressure
                 q = inter_set[i].q[j]
-                nabla_W = self.kernel.nabla_W(q)
-                p_scale = -self.particle_model.m * nabla_W
-                p_rho = p_rho_i + self.p[index_1D_j] / self.rho[index_1D_j] ** 2
 
-                for dim in range(n_dim):
-                    unit_vec = inter_set[i].dr[j * n_dim + dim] / (q * self.kernel.h)
-                    a_p[index_2D_i + dim] = a_p[index_2D_i + dim] + unit_vec * p_rho * p_scale
+                nabla_W = self.kernel.nabla_W(q)
+
+                p_scale = -self.particle_model.m * nabla_W
+                p_rho = p_rho_i + self.p[id_j] / self.rho[id_j] ** 2
+                unit_vec = inter_set[i].dr[j * n_dim : (j+1) * n_dim] / (q * self.kernel.h)
+
+                a_p[index_2D_i : index_2D_i + n_dim] = a_p[index_2D_i : index_2D_i + n_dim] + unit_vec * p_rho * p_scale
 
         self.a = a_p
+
+        # Gravitational Forcing
         self.a[n_dim-1::n_dim] = self.a[n_dim-1::n_dim] - self.atmospheric_model.g
 
 
