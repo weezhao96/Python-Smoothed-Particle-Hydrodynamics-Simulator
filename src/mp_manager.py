@@ -2,10 +2,16 @@
 
 #%% Import
 
+from __future__ import annotations
 from simulations import SimulationParameter
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from sph import BaseSPH, BasicSPH
 
 import multiprocessing as mp
 import multiprocessing.shared_memory as shared_memory
+import numpy as np
 
 
 #%% Main Class
@@ -28,7 +34,7 @@ class MP_Manager(object):
         # Sim Param
         n_dim = sim_param.n_dim
         
-        #%% Float
+        # Float
         
         # Array Memory Size
         precision_byte = sim_param.float_prec.value
@@ -54,7 +60,7 @@ class MP_Manager(object):
         self.shm['E_G'] = shared_memory.SharedMemory(create=True, name='E_G',
                                                      size=mem_array_1D)   
         
-        #%% Int
+        # Int
         
         # Array Memory Size
         precision_byte = sim_param.int_prec.value
@@ -65,6 +71,45 @@ class MP_Manager(object):
                                                       size=mem_array_1D)
         
  
-    def distribute_particle(self, data, data_G):
-        pass
+    def comm_G2L(self, n_dim: int, n_particle: int, id: np.ndarray,
+                 array: np.ndarray, array_G: np.ndarray, nd_array: int):
+                
+        if nd_array == 1:
+
+            for i in range(n_particle):
+
+                array[i] = array_G[id[i]]
+
+        elif nd_array == 2:
             
+            index = 0
+
+            for i in range(n_particle):
+
+                index_G = id[i] * n_dim
+
+                array[index : index + n_dim] = array_G[index_G : index_G + n_dim]
+
+                index += n_dim
+
+
+    def comm_L2G(self, n_dim: int, n_particle: int, id: np.ndarray,
+                 array: np.ndarray, array_G: np.ndarray, nd_array: int):
+        
+        if nd_array == 1:
+
+            for i in range(n_particle):
+
+                array_G[id[i]] = array[i]
+
+        elif nd_array == 2:
+            
+            index = 0
+
+            for i in range(n_particle):
+
+                index_G = id[i] * n_dim
+
+                array_G[index_G : index_G + n_dim] = array[index : index + n_dim]
+
+                index += n_dim

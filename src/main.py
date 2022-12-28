@@ -10,8 +10,6 @@ from precision_enums import IntType, FloatType
 from mp_manager import MP_Manager
 from io_manager import IO_Manager
 
-import numpy as np
-
 #%% Main
 
 if __name__ == '__main__':
@@ -23,17 +21,19 @@ if __name__ == '__main__':
     
     # Particle
     water = Particle(resting_density=1000.0, viscosity=1.0,
-                     specific_heat_ratio=1.0, speed_of_sound=30.0)
+                     specific_heat_ratio=7.0, speed_of_sound=30.0)
     
+
     #%% Simulation Definition
     
-    sim_param = SimulationParameter(n_dim=2, sim_duration=5.0, dt=0.001,
-                                    float_precision=FloatType.FLOAT64, int_precision=IntType.INT32)
+    sim_param = SimulationParameter(n_dim=2, sim_duration=0.01, dt=0.001,
+                                    float_precision=FloatType.FLOAT32, int_precision=IntType.INT32)
     
     unit_cube = SimulationDomain(bounding_box=[[0.0,1.0], [0.0,1.0]],
                                  initial_position=[[0.1,0.5], [0.1,0.2]])
     
-    quintiq = QuinticKernel(n_dim=sim_param.n_dim, smoothing_length=0.01, radius_of_influence=2.0)
+    quintic = QuinticKernel(n_dim=sim_param.n_dim, smoothing_length=0.01, radius_of_influence=2.0)
+    
     
     #%% Manager Definition
     
@@ -45,7 +45,7 @@ if __name__ == '__main__':
     #%% SPH
     
     sph = BasicSPH(SPH_Util(), earth, water,
-                   sim_param, unit_cube, quintiq,
+                   sim_param, unit_cube, quintic,
                    mp_manager, io_manager)
     
     sph.run_simulation()

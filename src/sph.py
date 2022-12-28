@@ -13,7 +13,6 @@ from interaction import Interaction
 
 import numpy as np
 import abc
-import matplotlib.pyplot as plt
 
 
 #%% Base Class Definition
@@ -172,17 +171,23 @@ class BaseSPH(object):
         self.Ep = self.x[self.sim_param.n_dim-1::self.sim_param.n_dim]
 
         # Energy Computation
-        m = self.particle_model.m
-        self.Ek = 0.5 * m * self.Ek
-        self.Ep = m * self.atmospheric_model.g * self.Ep
+        self.Ek = 0.5 * self.particle_model.m * self.Ek
+        self.Ep = self.particle_model.m * self.atmospheric_model.g * self.Ep
         self.E = self.Ek + self.Ep
         
         # Total Energy Computation
         self.Ek_total = np.sum(self.Ek)
         self.Ep_total = np.sum(self.Ep)
         self.E_total = np.sum(self.E)
+    
+
+    def _aggregate_total_energy(self):
+
+        self.Ek_total_G = self.Ek_total
+        self.Ep_total_G = self.Ep_total
+        self.E_total_G = self.Ek_total_G + self.Ep_total_G
         
-        
+
     def clean_up_simulation(self):
         
         for i in self.mp_manager.shm:
@@ -198,7 +203,7 @@ class BasicSPH(BaseSPH):
     def run_simulation(self):
         
         # Instantiate Particle State and Distribute to Process
-        self.util.init_particle_state(self)
+        self.util.init_particle_global_states(self)
 
         for attr in self.__dict__:
 
@@ -206,37 +211,59 @@ class BasicSPH(BaseSPH):
                 self.__dict__[attr[:-2]] = self.__dict__[attr]
 
         # Perturb Particle
-        self.util.perturb_particle(self)        
+        self.util.perturb_particles(self)        
         self._boundary_check()
         
         # Map Neighbour
-        interaction_set = []
+        inter_set = []
 
         for i in range(self.n_particle):
 
             new_interaction = Interaction(self.id[i], self.util.kissing_num, self.sim_param)
-            interaction_set.append(new_interaction)
+            inter_set.append(new_interaction)
 
-        self._map_neighbour(interaction_set)
+        self._map_neighbour(inter_set)
 
         # Density Pressure Computation
-        self._density_pressure_computation(interaction_set)
+        self._density_pressure_computation(inter_set)
         self._rescale_mass_density_pressure()
-        self._density_pressure_computation(interaction_set)
+        self._density_pressure_computation(inter_set)
 
         # Acceleration Computation
-        self._accel_computation(interaction_set)
+        self._accel_computation(inter_set)
 
         # Energy Computation
-        self._energy_computation()
+        self._energy_computation()                        
 
-        # Output Results
-        fig, ax = plt.subplots()
-        self.util.plot(self, plt, ax)
+        # Output Result
+        self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
+                                 self.rho, self.rho_G, 1)
+        self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
+                                 self.p, self.p_G, 1)
+
+        self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
+                                 self.x, self.x_G, 2)
+        self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
+                                 self.v, self.v_G, 2)
+        self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
+                                 self.a, self.a_G, 2)
+
+        self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
+                                 self.E, self.E_G, 1)
+        self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
+                                 self.Ek, self.Ek_G, 1)
+        self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
+                                 self.Ep, self.Ep_G, 1)
+
+        self._aggregate_total_energy()
+
+        self.io_manager.state_writer.output_data(self.n_particle_G, self.sim_param.n_dim, self.sim_param.t, self.sim_param.t_count,
+                                                 self.x_G, self.v_G, self.a_G, self.rho_G, self.p_G)
+        self.io_manager.energy_writer.output_data(self.sim_param.t, self.Ek_total_G, self.Ep_total_G, self.E_total_G)                                                    
 
         print('t = {:.3f}'.format(self.sim_param.t))
-        print('Total Kinetic Energy = {:.3f}'.format(self.Ek_total))
-        print('Total Potential Energy = {:.3f}'.format(self.Ep_total))
+        print('Total Kinetic Energy = {:.3f}'.format(self.Ek_total_G))
+        print('Total Potential Energy = {:.3f}'.format(self.Ep_total_G))
         print(' ')
 
         # First Timestepping
@@ -244,36 +271,65 @@ class BasicSPH(BaseSPH):
         self._boundary_check()
 
         self.sim_param.t += self.sim_param.dt
+        self.sim_param.t_count += 1
 
         # Timestep Looping            
         while (self.sim_param.t < self.sim_param.T - np.finfo(float).eps):
             
             # Map Neighbour
-            self._map_neighbour(interaction_set)
+            self._map_neighbour(inter_set)
 
             # Density Pressure Computation
-            self._density_pressure_computation(interaction_set)
+            self._density_pressure_computation(inter_set)
 
             # Acceleration Computation
-            self._accel_computation(interaction_set)
-            
+            self._accel_computation(inter_set)
+
             # Energy Computation
             self._energy_computation()
-            
-            # Output Results
-            self.util.plot(self, plt, ax)
 
-            print('t = {:.3f}'.format(self.sim_param.t))
-            print('Total Kinetic Energy = {:.3f}'.format(self.Ek_total))
-            print('Total Potential Energy = {:.3f}'.format(self.Ep_total))
-            print(' ')
+            # Output Results
+            if self.sim_param.t_count % 5 == 0:
+                
+                self.io_manager.state_writer.sync_queue(self.n_particle_G)
+                
+                self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
+                                        self.rho, self.rho_G, 1)
+                self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
+                                        self.p, self.p_G, 1)
+
+                self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
+                                        self.x, self.x_G, 2)
+                self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
+                                        self.v, self.v_G, 2)
+                self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
+                                        self.a, self.a_G, 2)
+
+                self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
+                                        self.E, self.E_G, 1)
+                self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
+                                        self.Ek, self.Ek_G, 1)
+                self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
+                                        self.Ep, self.Ep_G, 1)
+
+                self._aggregate_total_energy()
+                
+                self.io_manager.state_writer.output_data(self.n_particle_G, self.sim_param.n_dim, self.sim_param.t, self.sim_param.t_count,
+                                                         self.x_G, self.v_G, self.a_G, self.rho_G, self.p_G)
+                self.io_manager.energy_writer.output_data(self.sim_param.t, self.Ek_total_G, self.Ep_total_G, self.E_total_G)                                                                                                            
+                
+                print('t = {:.3f}'.format(self.sim_param.t))
+                print('Total Kinetic Energy = {:.3f}'.format(self.Ek_total))
+                print('Total Potential Energy = {:.3f}'.format(self.Ep_total))
+                print(' ')
+
 
             # Time Stepping
             self._time_stepping()
             self._boundary_check()
     
             self.sim_param.t += self.sim_param.dt
-
+            self.sim_param.t_count += 1
 
         self.clean_up_simulation()
             
@@ -341,19 +397,18 @@ class BasicSPH(BaseSPH):
         # Density
         for i in range(self.n_particle):
             
-            index = inter_set[i].index_1D
-
             # Kernel
-            W = self.kernel.W(inter_set[i].q[:index])
+            W = self.kernel.W(inter_set[i].q[:inter_set[i].index_1D])
 
             # Density
             self.rho[i] = np.sum(self.particle_model.m * W)
 
-        self.rho = self.rho + self.particle_model.m * self.kernel.W(np.array([0.0]))
+        self.rho = self.rho + self.particle_model.m * self.kernel.W(np.array([0.0], dtype=self.sim_param.float_prec.get_np_dtype()))
 
         # Pressure
         k = self.particle_model.c ** 2 * self.particle_model.rho_0 / self.particle_model.gamma
-        self.p = k * (np.power((self.rho / self.particle_model.rho_0), self.particle_model.gamma) - 1) 
+        self.p = k * (np.power((self.rho / self.particle_model.rho_0), self.particle_model.gamma) - 1.0) 
+
 
     def _accel_computation(self, inter_set: list[Interaction]):
         
@@ -374,7 +429,7 @@ class BasicSPH(BaseSPH):
             for j in range(inter_set[i].n_neighbour):
                 
                 # 1D and 2D Index
-                id_j = inter_set[i].id_neighbour[j]
+                id_L_j = inter_set[i].id_L_neighbour[j]
 
                 # Pressure
                 q = inter_set[i].q[j]
@@ -382,7 +437,7 @@ class BasicSPH(BaseSPH):
                 nabla_W = self.kernel.nabla_W(q)
 
                 p_scale = -self.particle_model.m * nabla_W
-                p_rho = p_rho_i + self.p[id_j] / self.rho[id_j] ** 2
+                p_rho = p_rho_i + self.p[id_L_j] / self.rho[id_L_j] ** 2
                 unit_vec = inter_set[i].dr[j * n_dim : (j+1) * n_dim] / (q * self.kernel.h)
 
                 a_p[index_2D_i : index_2D_i + n_dim] = a_p[index_2D_i : index_2D_i + n_dim] + unit_vec * p_rho * p_scale

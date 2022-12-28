@@ -52,10 +52,10 @@ class QuinticKernel(BaseKernel):
     def _set_alpha_dim(self, n_dim: int):
         
         if n_dim == 2:
-            self.alpha_dim = 10 / (7 * np.pi * np.power(self.h,2))
+            self.alpha_dim = 10.0 / (7.0 * np.pi * np.power(self.h,2))
             
         elif n_dim == 3:
-            self.alpha_dim = 21 / (16 * np.pi * np.power(self.h,3))          
+            self.alpha_dim = 21.0 / (16.0 * np.pi * np.power(self.h,3))          
             
             
     def W(self, q: np.ndarray) -> np.ndarray:

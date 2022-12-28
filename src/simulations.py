@@ -18,6 +18,7 @@ class SimulationParameter(object):
     T: float
     dt: float
     t: float
+    t_count: int
     float_prec: FloatType
     int_prec: IntType
     
@@ -31,6 +32,7 @@ class SimulationParameter(object):
         self.T = sim_duration # Simulation Duration
         self.dt = dt # Simulation Time Step
         self.t = 0.0 # Current Simulation Time
+        self.t_count = 0
         self.float_prec = float_precision
         self.int_prec = int_precision 
             

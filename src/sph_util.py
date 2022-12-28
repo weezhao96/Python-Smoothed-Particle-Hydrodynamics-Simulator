@@ -26,7 +26,7 @@ class SPH_Util(object):
         self.kissing_num = [0, 2, 6, 12, 24]
         
     
-    def init_particle_state(self, sph):
+    def init_particle_global_states(self, sph):
         
         # Variables
         n_dim = sph.sim_param.n_dim
@@ -119,7 +119,7 @@ class SPH_Util(object):
        
     
     @staticmethod
-    def perturb_particle(sph: BaseSPH):
+    def perturb_particles(sph: BaseSPH):
         
         # Define RNG Seed
         pid = os.getpid() # Process ID
@@ -127,8 +127,8 @@ class SPH_Util(object):
         rng = np.random.default_rng(current_time % pid)
         
         # Apply Perturbation
-        lattice = sph.kernel.radius_of_influence * sph.kernel.h
-        sph.x += lattice * (0.2 * rng.random(size=sph.x.shape) - 0.1)
+        lattice_distance = sph.kernel.radius_of_influence * sph.kernel.h
+        sph.x += lattice_distance * (0.2 * rng.random(size=sph.x.shape) - 0.1)
         
     
     @staticmethod
