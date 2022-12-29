@@ -188,8 +188,36 @@ class BaseSPH(object):
         self.E_total_G = self.Ek_total_G + self.Ep_total_G
         
 
+    def _sync_L2G(self):
+
+        # Output Result
+        self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
+                                 self.rho, self.rho_G, 1)
+        self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
+                                 self.p, self.p_G, 1)
+
+        self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
+                                 self.x, self.x_G, 2)
+        self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
+                                 self.v, self.v_G, 2)
+        self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
+                                 self.a, self.a_G, 2)
+
+        self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
+                                 self.E, self.E_G, 1)
+        self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
+                                 self.Ek, self.Ek_G, 1)
+        self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
+                                 self.Ep, self.Ep_G, 1)
+
+        self._aggregate_total_energy()
+
+
     def clean_up_simulation(self):
         
+        self.io_manager.state_writer.kill_writer_thread(self.n_particle_G)
+        self.io_manager.energy_writer.kill_writer_thread(self.n_particle_G)
+
         for i in self.mp_manager.shm:
             
             self.mp_manager.shm[i].close()
@@ -236,26 +264,7 @@ class BasicSPH(BaseSPH):
         self._energy_computation()                        
 
         # Output Result
-        self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
-                                 self.rho, self.rho_G, 1)
-        self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
-                                 self.p, self.p_G, 1)
-
-        self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
-                                 self.x, self.x_G, 2)
-        self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
-                                 self.v, self.v_G, 2)
-        self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
-                                 self.a, self.a_G, 2)
-
-        self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
-                                 self.E, self.E_G, 1)
-        self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
-                                 self.Ek, self.Ek_G, 1)
-        self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
-                                 self.Ep, self.Ep_G, 1)
-
-        self._aggregate_total_energy()
+        self._sync_L2G()
 
         self.io_manager.state_writer.output_data(self.n_particle_G, self.sim_param.n_dim, self.sim_param.t, self.sim_param.t_count,
                                                  self.x_G, self.v_G, self.a_G, self.rho_G, self.p_G)
@@ -289,38 +298,20 @@ class BasicSPH(BaseSPH):
             self._energy_computation()
 
             # Output Results
-            if self.sim_param.t_count % 5 == 0:
-                
+            if self.sim_param.t_count % 10 == 0:
+
                 self.io_manager.state_writer.sync_queue(self.n_particle_G)
-                
-                self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
-                                        self.rho, self.rho_G, 1)
-                self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
-                                        self.p, self.p_G, 1)
 
-                self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
-                                        self.x, self.x_G, 2)
-                self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
-                                        self.v, self.v_G, 2)
-                self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
-                                        self.a, self.a_G, 2)
-
-                self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
-                                        self.E, self.E_G, 1)
-                self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
-                                        self.Ek, self.Ek_G, 1)
-                self.mp_manager.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
-                                        self.Ep, self.Ep_G, 1)
-
-                self._aggregate_total_energy()
-                
+                self._sync_L2G()
+               
                 self.io_manager.state_writer.output_data(self.n_particle_G, self.sim_param.n_dim, self.sim_param.t, self.sim_param.t_count,
                                                          self.x_G, self.v_G, self.a_G, self.rho_G, self.p_G)
+                                                               
                 self.io_manager.energy_writer.output_data(self.sim_param.t, self.Ek_total_G, self.Ep_total_G, self.E_total_G)                                                                                                            
                 
                 print('t = {:.3f}'.format(self.sim_param.t))
-                print('Total Kinetic Energy = {:.3f}'.format(self.Ek_total))
-                print('Total Potential Energy = {:.3f}'.format(self.Ep_total))
+                print('Total Kinetic Energy = {:.3f}'.format(self.Ek_total_G))
+                print('Total Potential Energy = {:.3f}'.format(self.Ep_total_G))
                 print(' ')
 
 
@@ -330,6 +321,20 @@ class BasicSPH(BaseSPH):
     
             self.sim_param.t += self.sim_param.dt
             self.sim_param.t_count += 1
+
+        # Output Result
+        self.io_manager.state_writer.sync_queue(self.n_particle_G)
+
+        self._sync_L2G()
+        
+        self.io_manager.state_writer.output_data(self.n_particle_G, self.sim_param.n_dim, self.sim_param.t, self.sim_param.t_count,
+                                                 self.x_G, self.v_G, self.a_G, self.rho_G, self.p_G)
+        self.io_manager.energy_writer.output_data(self.sim_param.t, self.Ek_total_G, self.Ep_total_G, self.E_total_G)                                                                                                            
+        
+        print('t = {:.3f}'.format(self.sim_param.t))
+        print('Total Kinetic Energy = {:.3f}'.format(self.Ek_total))
+        print('Total Potential Energy = {:.3f}'.format(self.Ep_total))
+        print(' ')
 
         self.clean_up_simulation()
             
@@ -401,9 +406,10 @@ class BasicSPH(BaseSPH):
             W = self.kernel.W(inter_set[i].q[:inter_set[i].index_1D])
 
             # Density
-            self.rho[i] = np.sum(self.particle_model.m * W)
+            self.rho[i] = np.sum(W)
 
-        self.rho = self.rho + self.particle_model.m * self.kernel.W(np.array([0.0], dtype=self.sim_param.float_prec.get_np_dtype()))
+        self.rho = self.rho + self.kernel.W(np.array([0.0], dtype=self.sim_param.float_prec.get_np_dtype()))
+        self.rho = self.particle_model.m * self.rho
 
         # Pressure
         k = self.particle_model.c ** 2 * self.particle_model.rho_0 / self.particle_model.gamma
