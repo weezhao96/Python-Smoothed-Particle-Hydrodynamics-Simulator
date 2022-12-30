@@ -161,7 +161,7 @@ class BaseSPH(object):
         for i in range(self.n_particle):
             
             # Index
-            index_start = (i-1) * n_dim
+            index_start = i * n_dim
             index_end = index_start + n_dim
             
             # Ek <- v.v
