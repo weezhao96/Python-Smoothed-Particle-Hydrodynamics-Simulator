@@ -110,16 +110,16 @@ class StateWriter(WriterService):
         line = 't = {0:>15.5f} \n'.format(t)
         self.queue.put((-2,line))
 
-        line = '{0:>20} {1:>20} {2:>20} '.format('n','rho','p')
+        line = '{0:>20},{1:>20},{2:>20},'.format('n','rho','p')
 
         for dim in range(n_dim):
-            line = line + '{0:>20} '.format('x_{0}'.format(dim))
+            line = line + '{0:>20},'.format('x_{0}'.format(dim))
 
         for dim in range(n_dim):
-            line = line + '{0:>20} '.format('v_{0}'.format(dim))    
+            line = line + '{0:>20},'.format('v_{0}'.format(dim))    
 
         for dim in range(n_dim):
-            line = line + '{0:>20} '.format('a_{0}'.format(dim))
+            line = line + '{0:>20},'.format('a_{0}'.format(dim))
 
         self.queue.put((-1,line + '\n'))
         
@@ -190,16 +190,16 @@ class StateWriter(WriterService):
                x: np.ndarray, v: np.ndarray, a: np.ndarray, queue: PriorityQueue):
 
         # Output Data
-        line = '{0:>20} {1:>20.10f} {2:>20.10f} '.format(id, rho, p)
+        line = '{0:>20},{1:>20.10f},{2:>20.10f},'.format(id, rho, p)
 
         for dim in range(n_dim):
-            line = line + '{0:>20.10f} '.format(x[dim])
+            line = line + '{0:>20.10f},'.format(x[dim])
 
         for dim in range(n_dim):
-            line = line + '{0:>20.10f} '.format(v[dim])
+            line = line + '{0:>20.10f},'.format(v[dim])
 
         for dim in range(n_dim):
-            line = line + '{0:>20.10f} '.format(a[dim])
+            line = line + '{0:>20.10f},'.format(a[dim])
 
         # Insert to Queue
         queue.put((id,line + '\n'))
@@ -216,7 +216,7 @@ class EnergyWriter(WriterService):
         self.create_writer_thread(filename)
 
         # Parse Header
-        line = '{0:>20} {1:>20} {2:>20} {3:>20} \n'.format('t', 'E_kinetic', 'E_potential', 'E_total')
+        line = '{0:>20},{1:>20},{2:>20},{3:>20},\n'.format('t', 'E_kinetic', 'E_potential', 'E_total')
         self.queue.put((-1,line))
 
 
@@ -253,7 +253,7 @@ class EnergyWriter(WriterService):
     @staticmethod
     def _parse(t: float, Ek_total: np.float_, Ep_total: np.float_, E_total: np.float_, queue: PriorityQueue):
 
-        line = '{0:>20.5f} {1:>20.10f} {2:>20.10f} {3:>20.10f} \n'.format(t, Ek_total, Ep_total, E_total)
+        line = '{0:>20.5f},{1:>20.10f},{2:>20.10f},{3:>20.10f},\n'.format(t, Ek_total, Ep_total, E_total)
         queue.put((0,line))
 
     
