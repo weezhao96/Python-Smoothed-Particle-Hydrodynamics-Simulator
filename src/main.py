@@ -26,8 +26,8 @@ if __name__ == '__main__':
 
     #%% Simulation Definition
     
-    sim_param = SimulationParameter(n_dim=2, sim_duration=1.0, dt=0.001,
-                                    float_precision=FloatType.FLOAT32, int_precision=IntType.INT32)
+    sim_param = SimulationParameter(n_dim=2, sim_duration=0.1, dt=0.001,
+                                    float_precision=FloatType.FLOAT64, int_precision=IntType.INT32)
     
     unit_cube = SimulationDomain(bounding_box=[[0.0,1.0], [0.0,1.0]],
                                  initial_position=[[0.1,0.5], [0.1,0.2]])

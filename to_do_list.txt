@@ -1,3 +1,7 @@
-[] Syncing global and local arrays
+[x] Syncing global and local arrays
 
-[] Describe I/O Manager with threading
+[x] Describe I/O Manager with threading
+
+[] Load balancer
+
+[] distribute particles

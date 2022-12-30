@@ -107,7 +107,7 @@ class StateWriter(WriterService):
         self.queue.put((-3,line))
 
         # Parse Time and Header
-        line = 't = {0} \n'.format(t)
+        line = 't = {0:>15.5f} \n'.format(t)
         self.queue.put((-2,line))
 
         line = '{0:>20} {1:>20} {2:>20} '.format('n','rho','p')
@@ -139,11 +139,11 @@ class StateWriter(WriterService):
             index_2D += n_dim
 
 
-        for thread in self.parsers:
-            thread.start()
+        for parser in self.parsers:
+            parser.start()
 
-        for thread in self.parsers:
-            thread.join()
+        for parser in self.parsers:
+            parser.join()
 
 
     @staticmethod
@@ -190,16 +190,16 @@ class StateWriter(WriterService):
                x: np.ndarray, v: np.ndarray, a: np.ndarray, queue: PriorityQueue):
 
         # Output Data
-        line = '{0:>20} {1:>20} {2:>20} '.format(id, rho, p)
+        line = '{0:>20} {1:>20.10f} {2:>20.10f} '.format(id, rho, p)
 
         for dim in range(n_dim):
-            line = line + '{0:>20} '.format(x[dim])
+            line = line + '{0:>20.10f} '.format(x[dim])
 
         for dim in range(n_dim):
-            line = line + '{0:>20} '.format(v[dim])
+            line = line + '{0:>20.10f} '.format(v[dim])
 
         for dim in range(n_dim):
-            line = line + '{0:>20} '.format(a[dim])
+            line = line + '{0:>20.10f} '.format(a[dim])
 
         # Insert to Queue
         queue.put((id,line + '\n'))
@@ -220,9 +220,12 @@ class EnergyWriter(WriterService):
         self.queue.put((-1,line))
 
 
-    def output_data(self, t: float, Ek_total: np.float_, Ep_total: np.float_, E_total: np.float_):
+    def output_data(self, t: float, Ek_total: np.float_, Ep_total: np.float_, E_total: np.float_, t_sim: float = 0.0):
         
         self._parse(t, Ek_total, Ep_total, E_total, self.queue)
+
+        if t_sim != 0.0:
+            self._parse_sim_time(t_sim, self.queue)
 
 
     @staticmethod
@@ -250,5 +253,12 @@ class EnergyWriter(WriterService):
     @staticmethod
     def _parse(t: float, Ek_total: np.float_, Ep_total: np.float_, E_total: np.float_, queue: PriorityQueue):
 
-        line = '{0:>20} {1:>20} {2:>20} {3:>20} \n'.format(t, Ek_total, Ep_total, E_total)
+        line = '{0:>20.5f} {1:>20.10f} {2:>20.10f} {3:>20.10f} \n'.format(t, Ek_total, Ep_total, E_total)
         queue.put((0,line))
+
+    
+    @staticmethod
+    def _parse_sim_time(t_sim: float, queue: PriorityQueue):
+
+        line = 'Simulation Time : {0:.10f} s \n'.format(t_sim)
+        queue.put((0, line))

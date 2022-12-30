@@ -13,6 +13,7 @@ from interaction import Interaction
 
 import numpy as np
 import abc
+import time
 
 
 #%% Base Class Definition
@@ -230,6 +231,9 @@ class BasicSPH(BaseSPH):
     
     def run_simulation(self):
         
+        # Timer
+        time_start = time.time_ns()
+
         # Instantiate Particle State and Distribute to Process
         self.util.init_particle_global_states(self)
 
@@ -322,6 +326,10 @@ class BasicSPH(BaseSPH):
             self.sim_param.t += self.sim_param.dt
             self.sim_param.t_count += 1
 
+        # Time End
+        time_end = time.time_ns()
+        t_sim = (time_end - time_start) / 1_000_000_000
+
         # Output Result
         self.io_manager.state_writer.sync_queue(self.n_particle_G)
 
@@ -329,12 +337,14 @@ class BasicSPH(BaseSPH):
         
         self.io_manager.state_writer.output_data(self.n_particle_G, self.sim_param.n_dim, self.sim_param.t, self.sim_param.t_count,
                                                  self.x_G, self.v_G, self.a_G, self.rho_G, self.p_G)
-        self.io_manager.energy_writer.output_data(self.sim_param.t, self.Ek_total_G, self.Ep_total_G, self.E_total_G)                                                                                                            
+        self.io_manager.energy_writer.output_data(self.sim_param.t, self.Ek_total_G, self.Ep_total_G, self.E_total_G, t_sim)                                                                                                            
         
         print('t = {:.3f}'.format(self.sim_param.t))
         print('Total Kinetic Energy = {:.3f}'.format(self.Ek_total))
         print('Total Potential Energy = {:.3f}'.format(self.Ep_total))
         print(' ')
+
+        print('Simulation Duration : {} s'.format(t_sim))
 
         self.clean_up_simulation()
             
