@@ -216,7 +216,9 @@ class BaseSPH(object):
 
     def clean_up_simulation(self):
         
+        self.io_manager.state_writer.sync_queue(self.n_particle_G)
         self.io_manager.state_writer.kill_writer_thread(self.n_particle_G)
+        
         self.io_manager.energy_writer.kill_writer_thread(self.n_particle_G)
 
         for i in self.mp_manager.shm:
@@ -379,6 +381,7 @@ class BasicSPH(BaseSPH):
     def _map_neighbour(self, inter_set: list[Interaction]):
         
         n_dim = self.sim_param.n_dim
+        max_dist = self.kernel.h * self.kernel.radius_of_influence
 
         # Reset Interaction
         for i in range(self.n_particle):
@@ -391,20 +394,26 @@ class BasicSPH(BaseSPH):
             id_i = self.id[i]
             index_i = i * n_dim
 
+            x = self.x[index_i : index_i + n_dim]
+
             for j in range(i+1, self.n_particle):
 
                 id_j = self.id[j]
                 index_j = j * n_dim
 
-                dr = self.x[index_i : index_i+n_dim] - self.x[index_j : index_j+n_dim]
-                q = np.linalg.norm(dr, ord=2) / self.kernel.h
+                if np.abs(x[n_dim - 1] - self.x[index_j + n_dim - 1]) <= max_dist: 
 
-                if q < self.kernel.radius_of_influence:
-                    
-                    dv = self.v[index_i : index_i+n_dim] - self.v[index_j : index_j+n_dim]
+                    dr = self.x[index_i : index_i+n_dim] - self.x[index_j : index_j+n_dim]
+                    norm_dr = np.linalg.norm(dr, ord=2)
 
-                    inter_set[i].add_neighbour(id_j, q, dr, dv)
-                    inter_set[j].add_neighbour(id_i, q, -dr, -dv)
+                    if norm_dr <= max_dist:
+
+                        q = norm_dr / self.kernel.h
+                        
+                        dv = self.v[index_i : index_i+n_dim] - self.v[index_j : index_j+n_dim]
+
+                        inter_set[i].add_neighbour(id_j, q, dr, dv)
+                        inter_set[j].add_neighbour(id_i, q, -dr, -dv)
 
 
     def _density_pressure_computation(self, inter_set: list[Interaction]):
