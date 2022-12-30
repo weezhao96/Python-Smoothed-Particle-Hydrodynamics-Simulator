@@ -73,6 +73,8 @@ class SPH_Util(object):
         # Assign 2D States
         sph.v_G = np.ndarray(shape_2D, dtype=dtype_float, buffer=sph.mp_manager.shm['v_G'].buf)
         sph.v_G = np.zeros(shape_2D, dtype=dtype_float)
+
+        sph.v_G = np.array([0.5, 0.0], dtype=dtype_float) # addition
         
         sph.a_G = np.ndarray(shape_2D, dtype=dtype_float, buffer=sph.mp_manager.shm['a_G'].buf)
         sph.a_G = np.zeros(shape_2D, dtype=dtype_float)
