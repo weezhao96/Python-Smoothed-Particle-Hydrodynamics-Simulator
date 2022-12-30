@@ -30,7 +30,7 @@ if __name__ == '__main__':
                                     float_precision=FloatType.FLOAT64, int_precision=IntType.INT32)
     
     unit_cube = SimulationDomain(bounding_box=[[0.0,1.0], [0.0,1.0]],
-                                 initial_position=[[0.1,0.9], [0.0,0.2]])
+                                 initial_position=[[0.1,0.101], [0.1,0.1]])
     
     quintic = QuinticKernel(n_dim=sim_param.n_dim, smoothing_length=0.01, radius_of_influence=2.0)
     

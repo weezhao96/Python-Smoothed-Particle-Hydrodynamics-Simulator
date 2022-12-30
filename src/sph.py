@@ -161,7 +161,7 @@ class BaseSPH(object):
         for i in range(self.n_particle):
             
             # Index
-            index_start = (i-1) * n_dim
+            index_start = i * n_dim
             index_end = index_start + n_dim
             
             # Ek <- v.v
@@ -437,40 +437,43 @@ class BasicSPH(BaseSPH):
 
     def _accel_computation(self, inter_set: list[Interaction]):
         
-        # Parameter
-        n_dim = self.sim_param.n_dim
-        shape = self.a.shape[0]
+        # # Parameter
+        # n_dim = self.sim_param.n_dim
+        # shape = self.a.shape[0]
         
-        # Pressure Computation
-        a_p = np.zeros(shape=shape, dtype=self.sim_param.float_prec.get_np_dtype())
+        # # Pressure Computation
+        # a_p = np.zeros(shape=shape, dtype=self.sim_param.float_prec.get_np_dtype())
 
-        for i in range(self.n_particle):
+        # for i in range(self.n_particle):
             
-            index_1D_i = i
-            index_2D_i = i * n_dim
+        #     index_1D_i = i
+        #     index_2D_i = i * n_dim
 
-            p_rho_i = self.p[index_1D_i] / self.rho[index_1D_i] ** 2
+        #     p_rho_i = self.p[index_1D_i] / self.rho[index_1D_i] ** 2
 
-            for j in range(inter_set[i].n_neighbour):
+        #     for j in range(inter_set[i].n_neighbour):
                 
-                # 1D and 2D Index
-                id_L_j = inter_set[i].id_L_neighbour[j]
+        #         # 1D and 2D Index
+        #         id_L_j = inter_set[i].id_L_neighbour[j]
 
-                # Pressure
-                q = inter_set[i].q[j]
+        #         # Pressure
+        #         q = inter_set[i].q[j]
 
-                nabla_W = self.kernel.nabla_W(q)
+        #         nabla_W = self.kernel.nabla_W(q)
 
-                p_scale = -self.particle_model.m * nabla_W
-                p_rho = p_rho_i + self.p[id_L_j] / self.rho[id_L_j] ** 2
-                unit_vec = inter_set[i].dr[j * n_dim : (j+1) * n_dim] / (q * self.kernel.h)
+        #         p_scale = -self.particle_model.m * nabla_W
+        #         p_rho = p_rho_i + self.p[id_L_j] / self.rho[id_L_j] ** 2
+        #         unit_vec = inter_set[i].dr[j * n_dim : (j+1) * n_dim] / (q * self.kernel.h)
 
-                a_p[index_2D_i : index_2D_i + n_dim] = a_p[index_2D_i : index_2D_i + n_dim] + unit_vec * p_rho * p_scale
+        #         a_p[index_2D_i : index_2D_i + n_dim] = a_p[index_2D_i : index_2D_i + n_dim] + unit_vec * p_rho * p_scale
 
-        self.a = a_p
+        # self.a = a_p
 
-        # Gravitational Forcing
-        self.a[n_dim-1::n_dim] = self.a[n_dim-1::n_dim] - self.atmospheric_model.g
+        # # Gravitational Forcing
+        # self.a[n_dim-1::n_dim] = self.a[n_dim-1::n_dim] - self.atmospheric_model.g
+
+        shape = self.a.shape # addition
+        self.a = np.zeros(shape=shape) # addition
 
 
     def _first_time_stepping(self):
