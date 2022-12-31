@@ -18,7 +18,7 @@ import time
 
 #%% Base Class Definition
 
-class BaseSPH(object):
+class BaseSPH(abc.ABC):
 
     # Type Annotation
     util: SPH_Util
