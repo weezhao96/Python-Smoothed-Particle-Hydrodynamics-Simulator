@@ -54,7 +54,7 @@ class SimulationDomain(object):
         self.init_pos = initial_position
         
         
-    def compute_no_of_particles(self, lattice_distance: float, n_dim: int) -> tuple[int, list[int]]:
+    def compute_no_of_particles(self, lattice_distance: float, n_dim: int) -> tuple[int, tuple[int, ...]]:
         
         # Bound Checking
         for dim in range(n_dim):
@@ -73,8 +73,9 @@ class SimulationDomain(object):
             
             domain_length = self.init_pos[dim][1] - self.init_pos[dim][0] + np.finfo(float).eps    
             n_per_dim.append(int(math.floor(domain_length / lattice_distance)) + 1)
-            
-        print(n_per_dim)
+        
+        n_per_dim = tuple(n_per_dim)
+
         n_particle_G = reduce(lambda x, y: x * y, n_per_dim)
         
         return n_particle_G, n_per_dim

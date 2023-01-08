@@ -5,7 +5,7 @@
 from models import Atmosphere, Particle
 from simulations import SimulationParameter, SimulationDomain
 from kernels import QuinticKernel
-from sph import BasicSPH, SPH_Util
+from sph import BasicSPH, OneParticleSPH
 from precision_enums import IntType, FloatType
 from mp_manager import MP_Manager
 from io_manager import IO_Manager
@@ -26,29 +26,29 @@ if __name__ == '__main__':
 
     #%% Simulation Definition
     
-    sim_param = SimulationParameter(n_dim=2, sim_duration=0.1, dt=0.001,
+    sim_param = SimulationParameter(n_dim=2, sim_duration=1.0, dt=0.001,
                                     float_precision=FloatType.FLOAT64, int_precision=IntType.INT32)
     
     unit_cube = SimulationDomain(bounding_box=[[0.0,1.0], [0.0,1.0]],
-                                 initial_position=[[0.1,0.101], [0.1,0.1]])
+                                 initial_position=[[0.2,0.201], [0.1,0.1]])
     
     quintic = QuinticKernel(n_dim=sim_param.n_dim, smoothing_length=0.01, radius_of_influence=2.0)
     
     
     #%% Manager Definition
     
-    mp_manager = MP_Manager(n_process=1)
+    mp_manager = MP_Manager(n_dim=sim_param.n_dim, n_process=1)
 
     io_manager = IO_Manager(output_folder='output/')
 
 
     #%% SPH
     
-    sph = BasicSPH(SPH_Util(), earth, water,
-                   sim_param, unit_cube, quintic,
-                   mp_manager, io_manager)
+    sph = OneParticleSPH(earth, water,
+                         sim_param, unit_cube, quintic,
+                         mp_manager, io_manager)
     
-    sph.run_simulation()
+    sph.run()
     
     for attr in sph.__dict__:
                 

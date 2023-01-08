@@ -14,5 +14,4 @@ src/__pycache__
 !src/plots.py
 !src/precision_enums.py
 !src/simulations.py
-!src/sph_util.py
 !src/sph.py

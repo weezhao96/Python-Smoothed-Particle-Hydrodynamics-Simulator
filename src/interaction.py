@@ -20,8 +20,10 @@ class Interaction(object):
     dr: np.ndarray
     dv: np.ndarray
 
-    def __init__(self, id: int, kissing_number: list[int], sim_param: SimulationParameter):
+    def __init__(self, id: int, sim_param: SimulationParameter):
         
+        kissing_number: list[int] = [0, 2, 6, 12, 24]
+
         # Helper Variables
         self.n_dim = sim_param.n_dim
 
