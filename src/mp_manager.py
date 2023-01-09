@@ -3,14 +3,14 @@
 #%% Import
 
 from __future__ import annotations
+from typing import Callable
 from simulations import SimulationParameter, SimulationDomain
-from typing import TYPE_CHECKING, Optional
 from multiprocessing import Process
+from multiprocessing.process import BaseProcess
 from multiprocessing.shared_memory import SharedMemory
+from multiprocessing.synchronize import Barrier
 
-if TYPE_CHECKING:
-    from sph import BaseSPH, BasicSPH
-
+import multiprocessing as mp
 import numpy as np
 import random
 
@@ -33,6 +33,10 @@ class MP_Manager(object):
 
     bounds: dict[int, list[list[float]]]
 
+    current_proc: BaseProcess
+    proc_id: int
+    barrier: Barrier
+
     def __init__(self, n_dim: int, n_process: int):
     
         # Process Attributes
@@ -49,6 +53,9 @@ class MP_Manager(object):
         self.proc2grid = {}
 
         self.bounds = {}
+
+        self.current_proc = None
+        self.proc_id = None
 
         def is_prime(n: int) -> bool:
 
@@ -102,7 +109,7 @@ class MP_Manager(object):
             self.n_proc -= 1
 
     
-    def setup(self, sim_domain: SimulationDomain, sim_param: SimulationParameter, n_particle_G: int):
+    def setup_parent(self, sim_domain: SimulationDomain, sim_param: SimulationParameter, n_particle_G: int):
 
         self._compute_grid_size(sim_domain)
         self._assign_grid()
@@ -231,6 +238,27 @@ class MP_Manager(object):
         mem_array_1D = int(n_particle_G * precision_byte)
         
         self.shm['id_G'] = SharedMemory(create=True, name='id_G', size=mem_array_1D)
+
+
+    def setup_children_procs_and_run(self, simulation: Callable):
+
+        procs: list[Process] = []
+
+        barrier = mp.Barrier(self.n_proc)
+
+        for id in range(self.n_proc):
+
+            proc = Process(target=simulation, args=(barrier,), name='{}'.format(id))
+            procs.append(proc)
+
+        for proc in procs:
+            proc.start()
+
+
+    def get_current_proc(self):
+
+        self.current_proc = mp.current_process()
+        self.proc_id = int(self.current_proc.name)
 
 
     def comm_G2L(self, n_dim: int, n_particle: int, id: np.ndarray,

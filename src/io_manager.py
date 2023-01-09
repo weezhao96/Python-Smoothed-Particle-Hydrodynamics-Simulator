@@ -28,20 +28,33 @@ class IO_Manager(object):
 
         self.construct_output_dir()
 
-        # Writer
-        self.state_writer = StateWriter(self.output_folder + '/states')
-        self.energy_writer = EnergyWriter(self.output_folder)
+        self.state_writer = None
+        self.energy_writer = None
 
 
     def construct_output_dir(self):
 
-        if os.path.exists(self.output_folder):
-            shutil.rmtree(self.output_folder)
+        if os.path.exists(self.output_folder): shutil.rmtree(self.output_folder)
 
         os.makedirs(self.output_folder + '/states')
 
+    
+    def init_writer_services(self):
+
+        # Writer
+        if self.state_writer == None: self.state_writer = StateWriter(self.output_folder + '/states')
+        if self.energy_writer == None: self.energy_writer = EnergyWriter(self.output_folder)
+
 
 class WriterService(object):
+
+    # Type Annotation
+    output_folder: str
+
+    queue: PriorityQueue
+
+    writer: Thread | None
+    parsers: list[Thread]
 
     def __init__(self, output_folder: str):
         
@@ -53,12 +66,12 @@ class WriterService(object):
 
         # Threads
         self.writer = None
-        self.parsers = None
+        self.parsers = []
 
 
     def create_writer_thread(self, filename: str):
-
-        self.writer = Thread(target=self._write, args=(filename, self.queue), daemon=True)
+        
+        self.writer = Thread(target=self._write, args=(filename,), daemon=True)
         self.writer.start()
 
     
@@ -75,17 +88,13 @@ class WriterService(object):
 
 
     @abc.abstractmethod
-    def output_data(self):
-        pass
+    def output_data(self): pass
 
+    @abc.abstractmethod        
+    def _write(self): pass
 
-    @abc.abstractstaticmethod        
-    def _write():
-        pass
-
-    @abc.abstractstaticmethod
-    def _parse():
-        pass
+    @abc.abstractmethod
+    def _parse(self): pass
 
 
 class StateWriter(WriterService):
@@ -93,8 +102,6 @@ class StateWriter(WriterService):
     def output_data(self, n_particle_G: int, n_dim: int, t: float, t_count: int,
                     x_G: np.ndarray, v_G: np.ndarray, a_G: np.ndarray,
                     rho_G: np.ndarray, p_G: np.ndarray):
-
-        self.parsers = None
 
         # Writer Thread Creation
         if self.writer == None:
@@ -146,18 +153,17 @@ class StateWriter(WriterService):
             parser.join()
 
 
-    @staticmethod
-    def _write(filename: str, queue: PriorityQueue):
+    def _write(self, filename: str):
         
         thread_life = True
         file_life = False
 
         while thread_life:
 
-            _, line = queue.get()
+            _, line = self.queue.get()
             if line == 'END_OF_THREAD':
 
-                queue.task_done()
+                self.queue.task_done()
                 thread_life = False
 
             else:
@@ -166,15 +172,15 @@ class StateWriter(WriterService):
 
                 with open(filename + line, 'w+') as file:
                     
-                    queue.task_done()
+                    self.queue.task_done()
 
                     while file_life:
 
-                        _, line = queue.get()
+                        _, line = self.queue.get()
 
                         if line == 'END_OF_FILE':
 
-                            queue.task_done()
+                            self.queue.task_done()
                             file_life = False
 
                         else:
@@ -182,7 +188,7 @@ class StateWriter(WriterService):
                             file.write(line)
                             file.flush()
 
-                            queue.task_done()
+                            self.queue.task_done()
 
 
     @staticmethod
@@ -216,30 +222,28 @@ class EnergyWriter(WriterService):
         self.create_writer_thread(filename)
 
         # Parse Header
-        line = '{0:>20},{1:>20},{2:>20},{3:>20},\n'.format('t', 'E_kinetic', 'E_potential', 'E_total')
+        line = '{0:>20},{1:>20},{2:>20},{3:>20} \n'.format('t', 'E_kinetic', 'E_potential', 'E_total')
         self.queue.put((-1,line))
 
 
     def output_data(self, t: float, Ek_total: np.float_, Ep_total: np.float_, E_total: np.float_, t_sim: float = 0.0):
         
-        self._parse(t, Ek_total, Ep_total, E_total, self.queue)
+        self._parse(t, Ek_total, Ep_total, E_total)
 
-        if t_sim != 0.0:
-            self._parse_sim_time(t_sim, self.queue)
+        if t_sim != 0.0: self._parse_sim_time(t_sim)
 
 
-    @staticmethod
-    def _write(filename: str, queue: PriorityQueue):
+    def _write(self, filename: str):
 
         with open(filename, 'w+') as file:
 
             while True:
 
-                _, line = queue.get()
+                _, line = self.queue.get()
 
                 if line == 'END_OF_THREAD':
 
-                    queue.task_done()
+                    self.queue.task_done()
                     break
 
                 else:
@@ -247,18 +251,16 @@ class EnergyWriter(WriterService):
                     file.write(line)
                     file.flush()
 
-                    queue.task_done()
+                    self.queue.task_done()
 
 
-    @staticmethod
-    def _parse(t: float, Ek_total: np.float_, Ep_total: np.float_, E_total: np.float_, queue: PriorityQueue):
+    def _parse(self, t: float, Ek_total: np.float_, Ep_total: np.float_, E_total: np.float_):
 
-        line = '{0:>20.5f},{1:>20.10f},{2:>20.10f},{3:>20.10f},\n'.format(t, Ek_total, Ep_total, E_total)
-        queue.put((0,line))
+        line = '{0:>20.5f},{1:>20.10f},{2:>20.10f},{3:>20.10f} \n'.format(t, Ek_total, Ep_total, E_total)
+        self.queue.put((0,line))
 
     
-    @staticmethod
-    def _parse_sim_time(t_sim: float, queue: PriorityQueue):
+    def _parse_sim_time(self, t_sim: float):
 
         line = 'Simulation Time : {0:.10f} s \n'.format(t_sim)
-        queue.put((0, line))
+        self.queue.put((0, line))

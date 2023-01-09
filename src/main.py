@@ -37,7 +37,7 @@ if __name__ == '__main__':
     
     #%% Manager Definition
     
-    mp_manager = MP_Manager(n_dim=sim_param.n_dim, n_process=1)
+    mp_manager = MP_Manager(n_dim=sim_param.n_dim, n_process=2)
 
     io_manager = IO_Manager(output_folder='output/')
 

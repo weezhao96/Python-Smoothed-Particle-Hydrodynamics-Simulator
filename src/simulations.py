@@ -6,7 +6,6 @@ from functools import reduce
 from precision_enums import IntType, FloatType
 
 import numpy as np
-import math
 
 
 #%% Simulation Parameters
@@ -72,7 +71,7 @@ class SimulationDomain(object):
         for dim in range(n_dim):
             
             domain_length = self.init_pos[dim][1] - self.init_pos[dim][0] + np.finfo(float).eps    
-            n_per_dim.append(int(math.floor(domain_length / lattice_distance)) + 1)
+            n_per_dim.append(int(np.floor(domain_length / lattice_distance)) + 1)
         
         n_per_dim = tuple(n_per_dim)
 
