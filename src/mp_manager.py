@@ -254,6 +254,9 @@ class MP_Manager(object):
         for proc in procs:
             proc.start()
 
+        for proc in procs:
+            proc.join()
+
 
     def get_current_proc(self):
 

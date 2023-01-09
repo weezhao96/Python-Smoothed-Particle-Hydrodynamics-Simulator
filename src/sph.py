@@ -10,6 +10,7 @@ from kernels import BaseKernel
 from mp_manager import MP_Manager
 from io_manager import IO_Manager
 from interaction import Interaction
+from precision_enums import FloatType, IntType
 from multiprocessing.synchronize import Barrier
 
 import numpy as np
@@ -83,36 +84,40 @@ class BaseSPH(abc.ABC):
         self.mp_manager = mp_manager
         self.io_manager = io_manager
         
+        # Precision
+        float_prec = sim_param.float_prec.get_np_dtype()
+        int_prec = sim_param.int_prec.get_np_dtype(signed=False)
+
         # Global State Variables
         self.n_particle_G = int() # No. of Partiles
-        self.id_G = np.array([]) # Particle ID
-        self.x_G = np.array([]) # Particle Position
-        self.v_G = np.array([]) # Particle Velocity
-        self.a_G = np.array([]) # Particle Acceleration
-        self.rho_G = np.array([]) # Particle Density
-        self.p_G = np.array([]) # Particle Pressure
+        self.id_G = np.array([], dtype=int_prec) # Particle ID
+        self.x_G = np.array([], dtype=float_prec) # Particle Position
+        self.v_G = np.array([], dtype=float_prec) # Particle Velocity
+        self.a_G = np.array([], dtype=float_prec) # Particle Acceleration
+        self.rho_G = np.array([], dtype=float_prec) # Particle Density
+        self.p_G = np.array([], dtype=float_prec) # Particle Pressure
         
         # Local State Variables
         self.n_particle = int() # No. of Partiles
-        self.id = np.array([]) # Particle ID
-        self.x = np.array([]) # Particle Position
-        self.v = np.array([]) # Particle Velocity
-        self.a = np.array([]) # Particle Acceleration
-        self.rho = np.array([]) # Particle Density
-        self.p = np.array([]) # Particle Pressure
+        self.id = np.array([], dtype=int_prec) # Particle ID
+        self.x = np.array([], dtype=float_prec) # Particle Position
+        self.v = np.array([], dtype=float_prec) # Particle Velocity
+        self.a = np.array([], dtype=float_prec) # Particle Acceleration
+        self.rho = np.array([], dtype=float_prec) # Particle Density
+        self.p = np.array([], dtype=float_prec) # Particle Pressure
         
         # Global Energy Variables
-        self.Ek_G = np.array([]) # Particle Kinetic Energy
-        self.Ep_G = np.array([]) # Particle Potential Energy
-        self.E_G = np.array([]) # Particle Total Energy
+        self.Ek_G = np.array([], dtype=float_prec) # Particle Kinetic Energy
+        self.Ep_G = np.array([], dtype=float_prec) # Particle Potential Energy
+        self.E_G = np.array([], dtype=float_prec) # Particle Total Energy
         self.Ek_total_G = np.float_() # Total Kinetic Energy
         self.Ep_total_G = np.float_() # Total Potential Energy
         self.E_total_G = np.float_() # Total Energy
         
         # Local Energy Variables
-        self.Ek = np.array([]) # Particle Kinetic Energy
-        self.Ep = np.array([]) # Particle Potential Energy
-        self.E = np.array([]) # Particle Total Energy
+        self.Ek = np.array([], dtype=float_prec) # Particle Kinetic Energy
+        self.Ep = np.array([], dtype=float_prec) # Particle Potential Energy
+        self.E = np.array([], dtype=float_prec) # Particle Total Energy
         self.Ek_total = np.float_() # Total Kinetic Energy
         self.Ep_total = np.float_() # Total Potential Energy
         self.E_total = np.float_() # Total Energy
