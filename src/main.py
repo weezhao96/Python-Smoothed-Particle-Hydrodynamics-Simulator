@@ -26,18 +26,18 @@ if __name__ == '__main__':
 
     #%% Simulation Definition
     
-    sim_param = SimulationParameter(n_dim=2, sim_duration=1.0, dt=0.001,
+    sim_param = SimulationParameter(n_dim=3, sim_duration=1.0, dt=0.001,
                                     float_precision=FloatType.FLOAT32, int_precision=IntType.INT32)
     
-    unit_cube = SimulationDomain(bounding_box=[[0.0,1.0], [0.0,1.0]],
-                                 initial_position=[[0.2,0.201], [0.1,0.1]])
+    unit_cube = SimulationDomain(bounding_box=[[0.0,1.0], [0.0,1.0], [0.0,1.0]],
+                                 initial_position=[[0.2,0.201], [0.1,0.1], [0.1,0.1]])
     
     quintic = QuinticKernel(n_dim=sim_param.n_dim, smoothing_length=0.01, radius_of_influence=2.0)
     
     
     #%% Manager Definition
     
-    mp_manager = MP_Manager(n_dim=sim_param.n_dim, n_process=2)
+    mp_manager = MP_Manager(n_dim=sim_param.n_dim, n_process=9)
 
     io_manager = IO_Manager(output_folder='output/')
 

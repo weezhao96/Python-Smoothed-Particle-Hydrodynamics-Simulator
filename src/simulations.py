@@ -2,8 +2,9 @@
 
 #%% Import
 
-from functools import reduce
 from precision_enums import IntType, FloatType
+from kernels import BaseKernel
+from functools import reduce
 
 import numpy as np
 
@@ -53,8 +54,12 @@ class SimulationDomain(object):
         self.init_pos = initial_position
         
         
-    def compute_no_of_particles(self, lattice_distance: float, n_dim: int) -> tuple[int, tuple[int, ...]]:
+    def compute_no_of_particles(self, sim_param: SimulationParameter, kernel: BaseKernel) -> tuple[int, tuple[int, ...]]:
         
+        # Variables
+        n_dim = sim_param.n_dim
+        lattice_distance = kernel.radius_of_influence * kernel.h
+
         # Bound Checking
         for dim in range(n_dim):
             

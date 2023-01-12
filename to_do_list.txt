@@ -5,3 +5,10 @@
 [] Load balancer
 
 [] distribute particles
+
+
+
+[] Init Global Variables
+[] Init Unique Process Variables
+    [] - Pass to Process
+    [] - 
