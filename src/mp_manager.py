@@ -5,6 +5,7 @@
 from __future__ import annotations
 from typing import Callable, Iterable
 from simulations import SimulationParameter, SimulationDomain
+from precision_enums import IntType
 from multiprocessing import Process
 from multiprocessing.process import BaseProcess
 from multiprocessing.shared_memory import SharedMemory
@@ -13,7 +14,6 @@ from multiprocessing.connection import Connection
 
 import multiprocessing as mp
 import numpy as np
-import random
 
 
 #%% Main Class
@@ -213,6 +213,36 @@ class GlobalComm(object):
         self.barrier = barrier
 
 
+    def assign_particle2proc(self, grid: Grid, n_particle_G: int, x_G: np.ndarray, id_G: np.ndarray):
+
+        index: int = 0
+
+        for i in range(n_particle_G):
+            
+            coord = []
+
+            for dim in range(grid.n_dim):
+
+                coord.append(x_G[index+dim] // grid.grid_spacing[dim])
+                index += 1
+
+            index += 1
+
+            id_G[i] = grid.grid2proc[tuple(coord)]
+
+
+    def get_particle_id(self, proc_id: int, id_G: np.ndarray, id: np.ndarray, int_prec: IntType):
+
+        id_list = []
+
+        for i in range(id_G.shape[0]):
+
+            if proc_id == id_G[i]:
+                id_list.append(i)
+
+        return np.array(id_list, dtype=int_prec.get_np_dtype(False))[:]
+
+
     def sync_processes(self):
 
         self.barrier.wait()
@@ -303,7 +333,7 @@ class Grid(object):
     def setup(self, sim_domain: SimulationDomain, n_proc: int):
 
         self._compute_grid_size(sim_domain, n_proc)
-        self._assign_grid(n_proc)
+        self._assign_grid_proc_mapping(n_proc)
         self._compute_bounds(n_proc)
 
 
@@ -318,7 +348,7 @@ class Grid(object):
             root = np.sqrt(n_proc)
             ceil = int(np.ceil(root))
 
-            grid_size: list[int] = []
+            grid_size: list[int] = [n_proc, 1]
             prev_diff: float = float(n_proc * n_proc)
 
             for i in range(ceil,1,-1):
@@ -349,7 +379,7 @@ class Grid(object):
         self.grid_spacing = tuple(grid_spacing)
 
 
-    def _assign_grid(self, n_proc: int):
+    def _assign_grid_proc_mapping(self, n_proc: int):
 
         # Mappings
         # -- Grid Dimension == 1
@@ -393,5 +423,3 @@ class Grid(object):
                 bound.append([lwr_bound, upr_bound])
             
             self.bounds[proc] = bound
-
-

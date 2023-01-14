@@ -141,6 +141,8 @@ class BaseSPH(abc.ABC):
         # Instantiate Particle State and Distribute to Process
         self.init_particle_global_states(n_per_dim)
 
+        self.mp_manager.global_comm.assign_particle2proc(self.mp_manager.grid, self.n_particle_G, self.x_G, self.id_G)
+
 
     def init_particle_global_states(self, n_per_dim: tuple[int, ...]):
 
@@ -191,7 +193,7 @@ class BaseSPH(abc.ABC):
         
         # Assign 1D States
         self.id_G = np.ndarray(shape_1D, dtype=dtype_int, buffer=self.mp_manager.shm['id_G'].buf)
-        self.id_G[:] = np.array([i for i in range(shape_1D)], dtype=dtype_int)[:]
+        self.id_G[:] = np.zeros(shape=shape_1D, dtype=dtype_int)[:]
 
         self.Ek_G = np.ndarray(shape_1D, dtype=dtype_float, buffer=self.mp_manager.shm['Ek_G'].buf)
         self.Ek_G[:] = np.zeros(shape_1D, dtype=dtype_float)[:]
@@ -217,16 +219,11 @@ class BaseSPH(abc.ABC):
         self.a_G[:] = np.zeros(shape_2D, dtype=dtype_float)[:]
 
         # Assign Scalar
-        self.E_total_G = dtype_float(0.0)
-        self.Ek_total_G = dtype_float(0.0)
-        self.Ep_total_G = dtype_float(0.0)
+        self.E_total_G = np.sum(self.E_G)
+        self.Ek_total_G = np.sum(self.Ek_G)
+        self.Ep_total_G = np.sum(self.Ep_G)
 
-    
-    def run_simulation(self, local_comm: LocalComm):
-    
-        self.mp_manager.setup_children(local_comm)
-
-        if self.mp_manager.proc_id == 0: self.io_manager.init_writer_services()
+        self._perturb_particles()
 
 
     def _perturb_particles(self):
@@ -238,7 +235,19 @@ class BaseSPH(abc.ABC):
         
         # Apply Perturbation
         lattice_distance = self.kernel.radius_of_influence * self.kernel.h
-        self.x += lattice_distance * (0.2 * rng.random(size=self.x.shape) - 0.1)
+        self.x_G += lattice_distance * (0.2 * rng.random(size=self.x_G.shape) - 0.1)
+
+
+    def run_simulation(self, local_comm: LocalComm):
+    
+        self.mp_manager.setup_children(local_comm)
+
+        if self.mp_manager.proc_id == 0: self.io_manager.init_writer_services()
+
+        self.id = self.mp_manager.global_comm.get_particle_id(self.mp_manager.proc_id, self.id_G, self.id, self.sim_param.int_prec)
+
+        self._sync_G2L()
+
 
     @abc.abstractmethod
     def _boundary_check(self): pass
@@ -320,6 +329,59 @@ class BaseSPH(abc.ABC):
         self._aggregate_total_energy()
 
 
+    def _sync_G2L(self):
+
+        self.n_particle = self.id.shape[0]
+
+        print(self.id.shape)
+        
+        # Array Shape
+        shape_2D = self.n_particle * self.sim_param.n_dim
+        shape_1D = self.n_particle
+        
+        # Data Type
+        dtype_float = self.sim_param.float_prec.get_np_dtype()
+        
+        # Assign Position
+
+        self.Ek = np.zeros(shape_1D, dtype=dtype_float)
+        self.Ep = np.zeros(shape_1D, dtype=dtype_float)
+        self.E = np.zeros(shape_1D, dtype=dtype_float)
+        
+        self.rho = np.zeros(shape=shape_1D, dtype=dtype_float)
+        self.p = np.zeros(shape_1D, dtype=dtype_float)
+                
+        # Assign 2D States
+        self.x = np.zeros(shape_2D, dtype = dtype_float)
+        self.v = np.zeros(shape_2D, dtype=dtype_float)
+        self.a = np.zeros(shape_2D, dtype=dtype_float)
+
+        # Assign Scalar
+        self.E_total = np.sum(self.E)
+        self.Ek_total = np.sum(self.Ek)
+        self.Ep_total = np.sum(self.Ep)
+
+        # Output Result
+        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id,
+                                             self.rho, self.rho_G, 1)
+        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id,
+                                             self.p, self.p_G, 1)
+
+        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id,
+                                             self.x, self.x_G, 2)
+        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id,
+                                             self.v, self.v_G, 2)
+        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id,
+                                             self.a, self.a_G, 2)
+
+        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id,
+                                             self.E, self.E_G, 1)
+        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id,
+                                             self.Ek, self.Ek_G, 1)
+        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id,
+                                             self.Ep, self.Ep_G, 1)
+
+
     def clean_up_simulation(self):
 
         if self.io_manager.state_writer != None:
@@ -350,10 +412,10 @@ class BasicSPH(BaseSPH):
         super(BasicSPH, self).run_simulation(local_comm)
         
         # Timer
-        time_start = time.time_ns()
+        if self.mp_manager.proc_id == 0: time_start = time.time_ns()
 
         # Perturb Particle
-        self._perturb_particles()        
+        self._perturb_particles()
         self._boundary_check()
         
         # Map Neighbour
@@ -378,16 +440,17 @@ class BasicSPH(BaseSPH):
         self._energy_computation()
 
         # Output Result
-        self._sync_L2G()
+        if self.mp_manager.proc_id == 0:
+            self._sync_L2G()
 
-        self.io_manager.state_writer.output_data(self.n_particle_G, self.sim_param.n_dim, self.sim_param.t, self.sim_param.t_count,
-                                                 self.x_G, self.v_G, self.a_G, self.rho_G, self.p_G)
-        self.io_manager.energy_writer.output_data(self.sim_param.t, self.Ek_total_G, self.Ep_total_G, self.E_total_G)                                                    
+            self.io_manager.state_writer.output_data(self.n_particle_G, self.sim_param.n_dim, self.sim_param.t, self.sim_param.t_count,
+                                                    self.x_G, self.v_G, self.a_G, self.rho_G, self.p_G)
+            self.io_manager.energy_writer.output_data(self.sim_param.t, self.Ek_total_G, self.Ep_total_G, self.E_total_G)                                                    
 
-        print('t = {:.3f}'.format(self.sim_param.t))
-        print('Total Kinetic Energy = {:.3f}'.format(self.Ek_total_G))
-        print('Total Potential Energy = {:.3f}'.format(self.Ep_total_G))
-        print(' ')
+            print('t = {:.3f}'.format(self.sim_param.t))
+            print('Total Kinetic Energy = {:.3f}'.format(self.Ek_total_G))
+            print('Total Potential Energy = {:.3f}'.format(self.Ep_total_G))
+            print(' ')
 
         # First Timestepping
         self._first_time_stepping()
@@ -412,7 +475,7 @@ class BasicSPH(BaseSPH):
             self._energy_computation()
 
             # Output Results
-            if self.sim_param.t_count % 10 == 0:
+            if self.mp_manager.proc_id == 0 and self.sim_param.t_count % 10 == 0:
 
                 self.io_manager.state_writer.sync_queue(self.n_particle_G)
 
@@ -437,24 +500,27 @@ class BasicSPH(BaseSPH):
             self.sim_param.t_count += 1
 
         # Time End
-        time_end = time.time_ns()
-        t_sim = (time_end - time_start) / 1_000_000_000
+        if self.mp_manager.proc_id == 0:
 
-        # Output Result
-        self.io_manager.state_writer.sync_queue(self.n_particle_G)
+            time_end = time.time_ns()
+            t_sim = (time_end - time_start) / 1_000_000_000
 
-        self._sync_L2G()
-        
-        self.io_manager.state_writer.output_data(self.n_particle_G, self.sim_param.n_dim, self.sim_param.t, self.sim_param.t_count,
-                                                 self.x_G, self.v_G, self.a_G, self.rho_G, self.p_G)
-        self.io_manager.energy_writer.output_data(self.sim_param.t, self.Ek_total_G, self.Ep_total_G, self.E_total_G, t_sim)                                                                                                            
-        
-        print('t = {:.3f}'.format(self.sim_param.t))
-        print('Total Kinetic Energy = {:.3f}'.format(self.Ek_total))
-        print('Total Potential Energy = {:.3f}'.format(self.Ep_total))
-        print(' ')
+            # Output Result
 
-        print('Simulation Duration : {} s'.format(t_sim))
+            self.io_manager.state_writer.sync_queue(self.n_particle_G)
+
+            self._sync_L2G()
+            
+            self.io_manager.state_writer.output_data(self.n_particle_G, self.sim_param.n_dim, self.sim_param.t, self.sim_param.t_count,
+                                                    self.x_G, self.v_G, self.a_G, self.rho_G, self.p_G)
+            self.io_manager.energy_writer.output_data(self.sim_param.t, self.Ek_total_G, self.Ep_total_G, self.E_total_G, t_sim)                                                                                                            
+            
+            print('t = {:.3f}'.format(self.sim_param.t))
+            print('Total Kinetic Energy = {:.3f}'.format(self.Ek_total))
+            print('Total Potential Energy = {:.3f}'.format(self.Ep_total))
+            print(' ')
+
+            print('Simulation Duration : {} s'.format(t_sim))
 
         self.clean_up_simulation()
             
@@ -600,95 +666,99 @@ class OneParticleSPH(BasicSPH):
 
         super(BasicSPH, self).run_simulation(local_comm=local_comm)
 
-        # # Timer
-        # time_start = time.time_ns()
+        # Timer
+        if self.mp_manager.proc_id == 0: time_start = time.time_ns()
 
-        # # Perturb Particle
-        # self._boundary_check()
+        # Perturb Particle
+        self._boundary_check()
 
-        # # Energy Computation
-        # self._energy_computation()                        
+        # Energy Computation
+        self._energy_computation()                        
 
-        # # Output Result
-        # self._sync_L2G()
+        # Output Result
+        if self.mp_manager.proc_id == 0:
 
-        # self.io_manager.state_writer.output_data(self.n_particle_G, self.sim_param.n_dim, self.sim_param.t, self.sim_param.t_count,
-        #                                          self.x_G, self.v_G, self.a_G, self.rho_G, self.p_G)
-        # self.io_manager.energy_writer.output_data(self.sim_param.t, self.Ek_total_G, self.Ep_total_G, self.E_total_G)                                                    
+            self._sync_L2G()
 
-        # print('t = {:.3f}'.format(self.sim_param.t))
-        # print('Total Kinetic Energy = {:.3f}'.format(self.Ek_total_G))
-        # print('Total Potential Energy = {:.3f}'.format(self.Ep_total_G))
-        # print(' ')
+            self.io_manager.state_writer.output_data(self.n_particle_G, self.sim_param.n_dim, self.sim_param.t, self.sim_param.t_count,
+                                                    self.x_G, self.v_G, self.a_G, self.rho_G, self.p_G)
+            self.io_manager.energy_writer.output_data(self.sim_param.t, self.Ek_total_G, self.Ep_total_G, self.E_total_G)                                                    
 
-        # # First Timestepping
-        # self._first_time_stepping()
-        # self._boundary_check()
+            print('t = {:.3f}'.format(self.sim_param.t))
+            print('Total Kinetic Energy = {:.3f}'.format(self.Ek_total_G))
+            print('Total Potential Energy = {:.3f}'.format(self.Ep_total_G))
+            print(' ')
 
-        # self.sim_param.t += self.sim_param.dt
-        # self.sim_param.t_count += 1
+        # First Timestepping
+        self._first_time_stepping()
+        self._boundary_check()
 
-        # # Timestep Looping            
-        # while (self.sim_param.t < self.sim_param.T - np.finfo(float).eps):
+        self.sim_param.t += self.sim_param.dt
+        self.sim_param.t_count += 1
+
+        # Timestep Looping            
+        while (self.sim_param.t < self.sim_param.T - np.finfo(float).eps):
             
-        #     # Energy Computation
-        #     self._energy_computation()
+            # Energy Computation
+            self._energy_computation()
 
-        #     # Output Results
-        #     if self.sim_param.t_count % 10 == 0:
+            # Output Results
+            if self.mp_manager.proc_id == 0 and self.sim_param.t_count % 10 == 0:
 
-        #         self.io_manager.state_writer.sync_queue(self.n_particle_G)
+                self.io_manager.state_writer.sync_queue(self.n_particle_G)
 
-        #         self._sync_L2G()
+                self._sync_L2G()
                
-        #         self.io_manager.state_writer.output_data(self.n_particle_G, self.sim_param.n_dim, self.sim_param.t, self.sim_param.t_count,
-        #                                                  self.x_G, self.v_G, self.a_G, self.rho_G, self.p_G)
+                self.io_manager.state_writer.output_data(self.n_particle_G, self.sim_param.n_dim, self.sim_param.t, self.sim_param.t_count,
+                                                         self.x_G, self.v_G, self.a_G, self.rho_G, self.p_G)
                                                                
-        #         self.io_manager.energy_writer.output_data(self.sim_param.t, self.Ek_total_G, self.Ep_total_G, self.E_total_G)                                                                                                            
+                self.io_manager.energy_writer.output_data(self.sim_param.t, self.Ek_total_G, self.Ep_total_G, self.E_total_G)                                                                                                            
                 
-        #         print('t = {:.3f}'.format(self.sim_param.t))
-        #         print('Total Kinetic Energy = {:.3f}'.format(self.Ek_total_G))
-        #         print('Total Potential Energy = {:.3f}'.format(self.Ep_total_G))
-        #         print(' ')
+                print('t = {:.3f}'.format(self.sim_param.t))
+                print('Total Kinetic Energy = {:.3f}'.format(self.Ek_total_G))
+                print('Total Potential Energy = {:.3f}'.format(self.Ep_total_G))
+                print(' ')
 
 
-        #     # Time Stepping
-        #     self._time_stepping()
-        #     self._boundary_check()
+            # Time Stepping
+            self._time_stepping()
+            self._boundary_check()
     
-        #     self.sim_param.t += self.sim_param.dt
-        #     self.sim_param.t_count += 1
+            self.sim_param.t += self.sim_param.dt
+            self.sim_param.t_count += 1
 
-        # # Time End
-        # time_end = time.time_ns()
-        # t_sim = (time_end - time_start) / 1_000_000_000
+        # Time End
+        if self.mp_manager.proc_id == 0:
 
-        # # Output Result
-        # self.io_manager.state_writer.sync_queue(self.n_particle_G)
+            time_end = time.time_ns()
+            t_sim = (time_end - time_start) / 1_000_000_000
 
-        # self._sync_L2G()
-        
-        # self.io_manager.state_writer.output_data(self.n_particle_G, self.sim_param.n_dim, self.sim_param.t, self.sim_param.t_count,
-        #                                          self.x_G, self.v_G, self.a_G, self.rho_G, self.p_G)
-        # self.io_manager.energy_writer.output_data(self.sim_param.t, self.Ek_total_G, self.Ep_total_G, self.E_total_G, t_sim)                                                                                                            
-        
-        # print('t = {:.3f}'.format(self.sim_param.t))
-        # print('Total Kinetic Energy = {:.3f}'.format(self.Ek_total))
-        # print('Total Potential Energy = {:.3f}'.format(self.Ep_total))
-        # print(' ')
+            # Output Result
+            self.io_manager.state_writer.sync_queue(self.n_particle_G)
 
-        # print('Simulation Duration : {} s'.format(t_sim))
+            self._sync_L2G()
+            
+            self.io_manager.state_writer.output_data(self.n_particle_G, self.sim_param.n_dim, self.sim_param.t, self.sim_param.t_count,
+                                                    self.x_G, self.v_G, self.a_G, self.rho_G, self.p_G)
+            self.io_manager.energy_writer.output_data(self.sim_param.t, self.Ek_total_G, self.Ep_total_G, self.E_total_G, t_sim)                                                                                                            
+            
+            print('t = {:.3f}'.format(self.sim_param.t))
+            print('Total Kinetic Energy = {:.3f}'.format(self.Ek_total))
+            print('Total Potential Energy = {:.3f}'.format(self.Ep_total))
+            print(' ')
+
+            print('Simulation Duration : {} s'.format(t_sim))
 
         self.clean_up_simulation()
 
     
     def _first_time_stepping(self):
         
-        self.v = np.array([0.5, 0.0], dtype=self.sim_param.float_prec.get_np_dtype())
+        self.v = np.array([0.5, 0.0, 0.0], dtype=self.sim_param.float_prec.get_np_dtype())
         self.x = self.x + self.v * self.sim_param.dt
 
 
     def _time_stepping(self):
 
-        self.v = np.array([0.5, 0.0], dtype=self.sim_param.float_prec.get_np_dtype())
+        self.v = np.array([0.5, 0.0, 0.0], dtype=self.sim_param.float_prec.get_np_dtype())
         self.x = self.x + self.v * self.sim_param.dt
