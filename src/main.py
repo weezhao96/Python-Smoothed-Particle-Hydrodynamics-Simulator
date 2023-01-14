@@ -17,17 +17,15 @@ if __name__ == '__main__':
     #%% Model Definition
     
     # Atmosphere
-    earth = Atmosphere(gravitational_strength=9.81)
+    earth = Atmosphere(g=9.81)
     
     # Particle
-    water = Particle(resting_density=1000.0, viscosity=1.0,
-                     specific_heat_ratio=7.0, speed_of_sound=30.0)
+    water = Particle(rho_0=1000.0, mu=1.0, gamma=7.0, c=30.0)
     
 
     #%% Simulation Definition
     
-    sim_param = SimulationParameter(n_dim=3, sim_duration=1.0, dt=0.001,
-                                    float_precision=FloatType.FLOAT32, int_precision=IntType.INT32)
+    sim_param = SimulationParameter(n_dim=3, T=1.0, dt=0.001, float_prec=FloatType.FLOAT32, int_prec=IntType.INT32)
     
     unit_cube = SimulationDomain(bounding_box=[[0.0,1.0], [0.0,1.0], [0.0,1.0]],
                                  initial_position=[[0.2,0.201], [0.1,0.1], [0.1,0.1]])

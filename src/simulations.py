@@ -2,6 +2,7 @@
 
 #%% Import
 
+from dataclasses import dataclass
 from precision_enums import IntType, FloatType
 from kernels import BaseKernel
 from functools import reduce
@@ -11,30 +12,18 @@ import numpy as np
 
 #%% Simulation Parameters
 
+@dataclass
 class SimulationParameter(object):
 
     # Type Annotation
     n_dim: int
     T: float
     dt: float
-    t: float
-    t_count: int
     float_prec: FloatType
     int_prec: IntType
-    
-    def __init__(self, n_dim: int,
-                 sim_duration: float, dt: float = 0.1,
-                 float_precision: FloatType = FloatType.FLOAT64,
-                 int_precision: IntType = IntType.INT32):
-    
-        # Simulation Parameters
-        self.n_dim = n_dim # No. of Spatial Dimension
-        self.T = sim_duration # Simulation Duration
-        self.dt = dt # Simulation Time Step
-        self.t = 0.0 # Current Simulation Time
-        self.t_count = 0
-        self.float_prec = float_precision
-        self.int_prec = int_precision 
+    t: float = 0.0
+    t_count: int = 0
+
             
         
 #%% Simulation Domain
