@@ -15,7 +15,7 @@ class Interaction(object):
     n_dim: int
     id: int
     n_neighbour: int
-    id_L_neighbour: np.ndarray
+    id_neighbour: np.ndarray
     q: np.ndarray
     dr: np.ndarray
     dv: np.ndarray
@@ -37,7 +37,7 @@ class Interaction(object):
         self.id = id
         self.n_neighbour = int()
 
-        self.id_L_neighbour = np.ndarray(shape=shape_1D, dtype=int_dtype)
+        self.id_neighbour = np.ndarray(shape=shape_1D, dtype=int_dtype)
         self.q = np.ndarray(shape=shape_1D, dtype=float_dtype)
         self.dr = np.ndarray(shape=shape_2D, dtype=float_dtype)
         self.dv = np.ndarray(shape=shape_2D, dtype=float_dtype)
@@ -50,7 +50,7 @@ class Interaction(object):
 
         self.n_neighbour += 1
         
-        self.id_L_neighbour[self.index_1D] = id
+        self.id_neighbour[self.index_1D] = id
         self.q[self.index_1D] = q
         self.index_1D += 1
 

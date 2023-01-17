@@ -2,16 +2,12 @@
 
 #%% Import
 
-from typing import TYPE_CHECKING
-
 from models import Atmosphere, Particle
 from simulations import SimulationParameter, SimulationDomain
 from kernels import BaseKernel
 from mp_manager import MP_Manager, LocalComm
 from io_manager import IO_Manager
 from interaction import Interaction
-from precision_enums import FloatType, IntType
-from multiprocessing.synchronize import Barrier
 
 import numpy as np
 import abc
@@ -419,22 +415,22 @@ class BasicSPH(BaseSPH):
         self._boundary_check()
         
         # Map Neighbour
-        inter_set = []
+        interactions = []
 
         for i in range(self.n_particle):
 
             new_interaction = Interaction(self.id[i], self.sim_param)
-            inter_set.append(new_interaction)
+            interactions.append(new_interaction)
 
-        self._map_neighbour(inter_set)
+        self._map_neighbour(interactions)
 
         # Density Pressure Computation
-        self._density_pressure_computation(inter_set)
+        self._density_pressure_computation(interactions)
         self._rescale_mass_density_pressure()
-        self._density_pressure_computation(inter_set)
+        self._density_pressure_computation(interactions)
 
         # Acceleration Computation
-        self._accel_computation(inter_set)
+        self._accel_computation(interactions)
 
         # Energy Computation
         self._energy_computation()
@@ -463,13 +459,13 @@ class BasicSPH(BaseSPH):
         while (self.sim_param.t < self.sim_param.T - np.finfo(float).eps):
             
             # Map Neighbour
-            self._map_neighbour(inter_set)
+            self._map_neighbour(interactions)
 
             # Density Pressure Computation
-            self._density_pressure_computation(inter_set)
+            self._density_pressure_computation(interactions)
 
             # Acceleration Computation
-            self._accel_computation(inter_set)
+            self._accel_computation(interactions)
 
             # Energy Computation
             self._energy_computation()
@@ -552,13 +548,13 @@ class BasicSPH(BaseSPH):
                 index += 1
                 
     
-    def _map_neighbour(self, inter_set: list[Interaction]):
+    def _map_neighbour(self, interactions: list[Interaction]):
         
         n_dim = self.sim_param.n_dim
         max_dist = self.kernel.h * self.kernel.radius_of_influence
 
         # Reset Interaction
-        for i in range(self.n_particle): inter_set[i].reset()
+        for i in range(self.n_particle): interactions[i].reset()
             
         # Compute Interaction
 
@@ -585,17 +581,17 @@ class BasicSPH(BaseSPH):
                         
                         dv = self.v[index_i : index_i+n_dim] - self.v[index_j : index_j+n_dim]
 
-                        inter_set[i].add_neighbour(id_j, q, dr, dv)
-                        inter_set[j].add_neighbour(id_i, q, -dr, -dv)
+                        interactions[i].add_neighbour(id_j, q, dr, dv)
+                        interactions[j].add_neighbour(id_i, q, -dr, -dv)
 
 
-    def _density_pressure_computation(self, inter_set: list[Interaction]):
+    def _density_pressure_computation(self, interactions: list[Interaction]):
 
         # Density
         for i in range(self.n_particle):
             
             # Kernel
-            W = self.kernel.W(inter_set[i].q[:inter_set[i].index_1D])
+            W = self.kernel.W(interactions[i].q[:interactions[i].index_1D])
 
             # Density
             self.rho[i] = np.sum(W)
@@ -608,7 +604,7 @@ class BasicSPH(BaseSPH):
         self.p = k * (np.power((self.rho / self.particle_model.rho_0), self.particle_model.gamma) - 1.0) 
 
 
-    def _accel_computation(self, inter_set: list[Interaction]):
+    def _accel_computation(self, interactions: list[Interaction]):
         
         # Parameter
         n_dim = self.sim_param.n_dim
@@ -624,19 +620,19 @@ class BasicSPH(BaseSPH):
 
             p_rho_i = self.p[index_1D_i] / self.rho[index_1D_i] ** 2
 
-            for j in range(inter_set[i].n_neighbour):
+            for j in range(interactions[i].n_neighbour):
                 
                 # 1D and 2D Index
-                id_L_j = inter_set[i].id_L_neighbour[j]
+                id_j = interactions[i].id_neighbour[j]
 
                 # Pressure
-                q = inter_set[i].q[j]
+                q = interactions[i].q[j]
 
                 nabla_W = self.kernel.nabla_W(q)
 
                 p_scale = -self.particle_model.m * nabla_W
-                p_rho = p_rho_i + self.p[id_L_j] / self.rho[id_L_j] ** 2
-                unit_vec = inter_set[i].dr[j * n_dim : (j+1) * n_dim] / (q * self.kernel.h)
+                p_rho = p_rho_i + self.p[id_j] / self.rho[id_j] ** 2
+                unit_vec = interactions[i].dr[j * n_dim : (j+1) * n_dim] / (q * self.kernel.h)
 
                 a_p[index_2D_i : index_2D_i + n_dim] = a_p[index_2D_i : index_2D_i + n_dim] + unit_vec * p_rho * p_scale
 
