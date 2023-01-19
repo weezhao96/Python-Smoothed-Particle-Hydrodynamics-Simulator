@@ -21,11 +21,11 @@ class BaseKernel(object):
         self.radius_of_influence = radius_of_influence
         
         self.alpha_dim = float()
-        self._set_alpha_dim(n_dim)
+        self._set_alpha_dim()
 
 
     @abc.abstractmethod
-    def _set_alpha_dim(self, n_dim: int):
+    def _set_alpha_dim(self):
         pass
 
     @abc.abstractmethod
@@ -49,12 +49,12 @@ class QuinticKernel(BaseKernel):
         
         super().__init__(n_dim, smoothing_length, radius_of_influence)
         
-    def _set_alpha_dim(self, n_dim: int):
+    def _set_alpha_dim(self):
         
-        if n_dim == 2:
+        if self.n_dim == 2:
             self.alpha_dim = 10.0 / (7.0 * np.pi * np.power(self.h,2))
             
-        elif n_dim == 3:
+        elif self.n_dim == 3:
             self.alpha_dim = 21.0 / (16.0 * np.pi * np.power(self.h,3))          
             
             

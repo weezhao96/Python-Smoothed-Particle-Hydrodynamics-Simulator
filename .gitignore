@@ -2,16 +2,6 @@
 report/
 output/
 serial_output/
-src/*
+src/mp_test.py
 src/__pycache__
 .vscode/
-!src/interaction.py
-!src/io_manager.py
-!src/kernels.py
-!src/main.py
-!src/models.py
-!src/mp_manager.py
-!src/plots.py
-!src/precision_enums.py
-!src/simulations.py
-!src/sph.py
