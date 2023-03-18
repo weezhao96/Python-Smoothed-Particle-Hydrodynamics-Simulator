@@ -58,14 +58,12 @@ class AdaptiveVector(object):
         if len(self.gap_chunk_index) == 0:
             return
 
-        loop = 0
         while self.end_chunk_index != self.n_particle:
             
             start_index: int = (self.end_chunk_index - 1) * self.n_dim
             end_index: int = start_index + self.n_dim
 
-            chunk_index: int = self.gap_chunk_index[-1]
-            gap_start_index: int = chunk_index * self.n_dim
+            gap_start_index: int = self.gap_chunk_index[-1] * self.n_dim
             gap_end_index: int = gap_start_index + self.n_dim
 
             self.data[gap_start_index:gap_end_index] = self.data[start_index:end_index]
@@ -73,26 +71,29 @@ class AdaptiveVector(object):
             self.gap_chunk_index.pop()
             self.end_chunk_index -= 1
 
-            for i in range(len(self.gap_chunk_index)):
-                
-                if(self.gap_chunk_index[i] > self.end_chunk_index):
-                    self.gap_chunk_index.pop(i)
+            self.gap_chunk_index = list(filter(lambda x: x <= self.end_chunk_index, self.gap_chunk_index))
 
         self.gap_chunk_index.clear()
 
 
 if __name__ == "__main__":
 
-    x = AdaptiveVector(2, np.int32)
     y = np.array([0,1,2,3,4,5,6,7,8,9], dtype=np.int32)
-    
-    x.append_data(y)
 
+    x = AdaptiveVector(2, np.int32)    
+    x.append_data(y)
     x.gap_chunk_index.append(3)
     x.gap_chunk_index.append(2)
     x.n_particle -= 2
     x.fill_gaps()
+    print(x.data)
 
     x2 = AdaptiveVector(2, np.int32)
     x2.append_data(y)
+    x2.gap_chunk_index.append(0)
+    x2.gap_chunk_index.append(2)
+    x2.n_particle -= 2
     x2.fill_gaps()
+    print(x2.data)
+    print(x2.end_chunk_index)
+    print(x2.n_particle)
