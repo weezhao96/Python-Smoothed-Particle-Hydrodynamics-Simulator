@@ -3,14 +3,14 @@
 #%% Import
 
 from __future__ import annotations
-from typing import Callable, Iterable, Union
+from typing import Callable, Union
 from simulations import SimulationParameter, SimulationDomain
 from precision_enums import IntType
 from multiprocessing import Process
 from multiprocessing.process import BaseProcess
 from multiprocessing.shared_memory import SharedMemory
 from multiprocessing.synchronize import Barrier
-from multiprocessing.connection import Connection
+from multiprocessing.connection import PipeConnection
 
 import multiprocessing as mp
 import numpy as np
@@ -116,8 +116,8 @@ class MP_Manager(object):
         
         # Generate Vectors
         vectors: list[tuple[int, ...]] = []
-        in_comms : Union[list[Connection], list[list[Connection]]] = []
-        out_comms : Union[list[Connection], list[list[Connection]]] = []
+        in_comms : Union[list[PipeConnection], list[list[PipeConnection]]] = []
+        out_comms : Union[list[PipeConnection], list[list[PipeConnection]]] = []
 
         if n_dim == 1:
 
@@ -295,11 +295,11 @@ class GlobalComm(object):
 
 class LocalComm(object):
 
-    out_comms: Union[list[Connection], list[list[Connection]]]
-    in_comms: Union[list[Connection], list[list[Connection]]]
+    out_comms: Union[list[PipeConnection], list[list[PipeConnection]]]
+    in_comms: Union[list[PipeConnection], list[list[PipeConnection]]]
 
-    def __init__(self, out_comms: Union[list[Connection], list[list[Connection]]],
-                 in_comms: Union[list[Connection], list[list[Connection]]]):
+    def __init__(self, out_comms: Union[list[PipeConnection], list[list[PipeConnection]]],
+                 in_comms: Union[list[PipeConnection], list[list[PipeConnection]]]):
         
         self.out_comms = out_comms
         self.in_comms = in_comms
