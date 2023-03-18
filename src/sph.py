@@ -136,7 +136,6 @@ class BaseSPH(abc.ABC):
 
         # Instantiate Particle State and Distribute to Process
         self.init_particle_global_states(n_per_dim)
-
         self.mp_manager.global_comm.assign_particle2proc(self.mp_manager.grid, self.n_particle_G, self.x_G, self.id_G)
 
 
@@ -328,8 +327,6 @@ class BaseSPH(abc.ABC):
     def _sync_G2L(self):
 
         self.n_particle = self.id.shape[0]
-
-        print(self.id.shape)
         
         # Array Shape
         shape_2D = self.n_particle * self.sim_param.n_dim
@@ -692,6 +689,8 @@ class OneParticleSPH(BasicSPH):
         self.sim_param.t += self.sim_param.dt
         self.sim_param.t_count += 1
 
+        self.mp_manager.global_comm.sync_processes()
+
         # Timestep Looping            
         while (self.sim_param.t < self.sim_param.T - np.finfo(float).eps):
             
@@ -722,6 +721,8 @@ class OneParticleSPH(BasicSPH):
     
             self.sim_param.t += self.sim_param.dt
             self.sim_param.t_count += 1
+
+            self.mp_manager.global_comm.sync_processes()
 
         # Time End
         if self.mp_manager.proc_id == 0:

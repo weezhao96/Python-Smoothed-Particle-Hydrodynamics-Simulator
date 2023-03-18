@@ -3,7 +3,7 @@
 #%% Import
 
 from __future__ import annotations
-from typing import Callable, Iterable
+from typing import Callable, Iterable, Union
 from simulations import SimulationParameter, SimulationDomain
 from precision_enums import IntType
 from multiprocessing import Process
@@ -116,6 +116,8 @@ class MP_Manager(object):
         
         # Generate Vectors
         vectors: list[tuple[int, ...]] = []
+        in_comms : Union[list[Connection], list[list[Connection]]] = []
+        out_comms : Union[list[Connection], list[list[Connection]]] = []
 
         if n_dim == 1:
 
@@ -125,9 +127,6 @@ class MP_Manager(object):
                 vector.append(i)
 
                 vectors.append(tuple(vector))
-
-            in_comms : list[Connection] = []
-            out_comms : list[Connection] = []
 
             for i in range(3):
                 
@@ -145,8 +144,8 @@ class MP_Manager(object):
 
                     vectors.append(tuple(vector))
 
-            in_comms : list[list[Connection]] = [[],[],[]]
-            out_comms : list[list[Connection]] = [[],[],[]]
+            in_comms = [[],[],[]]
+            out_comms = [[],[],[]]
 
             for i in range(3):
                 for j in range(3):
@@ -213,17 +212,17 @@ class GlobalComm(object):
         self.barrier = barrier
 
 
-    def assign_particle2proc(self, grid: Grid, n_particle_G: int, x_G: np.ndarray, id_G: np.ndarray):
+    def assign_particle2proc(self, grid: Grid, n_particle: int, x: np.ndarray, id_G: np.ndarray):
 
         index: int = 0
 
-        for i in range(n_particle_G):
+        for i in range(n_particle):
             
             coord = []
 
             for dim in range(grid.n_dim):
 
-                coord.append(x_G[index+dim] // grid.grid_spacing[dim])
+                coord.append(x[index+dim] // grid.grid_spacing[dim])
                 index += 1
 
             index += 1
@@ -296,7 +295,11 @@ class GlobalComm(object):
 
 class LocalComm(object):
 
-    def __init__(self, out_comms, in_comms):
+    out_comms: Union[list[Connection], list[list[Connection]]]
+    in_comms: Union[list[Connection], list[list[Connection]]]
+
+    def __init__(self, out_comms: Union[list[Connection], list[list[Connection]]],
+                 in_comms: Union[list[Connection], list[list[Connection]]]):
         
         self.out_comms = out_comms
         self.in_comms = in_comms
