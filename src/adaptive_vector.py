@@ -12,6 +12,7 @@ class AdaptiveVector(object):
     n_dim: int
     n_particle: int
     shape: tuple[int]
+    end_index: int
 
     data: np.ndarray
     end_chunk_index: int
@@ -21,11 +22,17 @@ class AdaptiveVector(object):
         
         self.n_dim = n_dim
         self.n_particle = 0
-        self.shape = tuple([self.n_dim * self.n_particle + 10])
+        self.shape = tuple([0])
+        self.end_index = self.n_particle * self.n_dim
 
         self.data = np.ndarray(shape=self.shape, dtype=dtype)
         self.end_chunk_index = 0
         self.gap_chunk_index = []
+
+    
+    def __call__(self) -> np.ndarray:
+
+        return self.data[0 : self.end_index]
 
 
     def _resize_shape(self, exp_size: int):
@@ -44,9 +51,10 @@ class AdaptiveVector(object):
         if (self.shape[0] < end_index):
             self._resize_shape(end_index - self.shape[0] + 10)
 
-        self.data[start_index: end_index] = data[:]
+        self.data[start_index : end_index] = data[:]
 
         self.n_particle += size
+        self.end_index = self.n_particle * self.n_dim
         self.end_chunk_index = self.n_particle
 
     
@@ -77,4 +85,5 @@ class AdaptiveVector(object):
 
             self.gap_chunk_index = list(filter(lambda x: x <= self.end_chunk_index, self.gap_chunk_index))
 
+        self.end_index = self.n_particle * self.n_dim
         self.gap_chunk_index.clear()

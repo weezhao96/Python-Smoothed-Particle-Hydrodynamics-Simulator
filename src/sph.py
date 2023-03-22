@@ -8,6 +8,7 @@ from kernels import BaseKernel
 from mp_manager import MP_Manager, LocalComm
 from io_manager import IO_Manager
 from interaction import Interaction
+from adaptive_vector import AdaptiveVector
 
 import numpy as np
 import abc
@@ -40,12 +41,12 @@ class BaseSPH(abc.ABC):
     p_G: np.ndarray
 
     n_particle: int
-    id: np.ndarray
-    x: np.ndarray
-    v: np.ndarray
-    a: np.ndarray
-    rho: np.ndarray
-    p: np.ndarray
+    id: AdaptiveVector
+    x: AdaptiveVector
+    v: AdaptiveVector
+    a: AdaptiveVector
+    rho: AdaptiveVector
+    p: AdaptiveVector
 
     Ek_G: np.ndarray
     Ep_G: np.ndarray
@@ -54,9 +55,9 @@ class BaseSPH(abc.ABC):
     Ep_total_G: np.float_
     E_total_G: np.float_
 
-    Ek: np.ndarray
-    Ep: np.ndarray
-    E: np.ndarray
+    Ek: AdaptiveVector
+    Ep: AdaptiveVector
+    E: AdaptiveVector
     Ek_total: np.float_
     Ep_total: np.float_
     E_total: np.float_
@@ -95,12 +96,12 @@ class BaseSPH(abc.ABC):
         
         # Local State Variables
         self.n_particle = int() # No. of Particle
-        self.id = np.array([], dtype=int_prec) # Particle ID
-        self.x = np.array([], dtype=float_prec) # Particle Position
-        self.v = np.array([], dtype=float_prec) # Particle Velocity
-        self.a = np.array([], dtype=float_prec) # Particle Acceleration
-        self.rho = np.array([], dtype=float_prec) # Particle Density
-        self.p = np.array([], dtype=float_prec) # Particle Pressure
+        self.id = AdaptiveVector(n_dim=1, dtype=int_prec) # Particle ID
+        self.x = AdaptiveVector(n_dim=self.sim_param.n_dim, dtype=float_prec) # Particle Position
+        self.v = AdaptiveVector(n_dim=self.sim_param.n_dim, dtype=float_prec) # Particle Velocity
+        self.a = AdaptiveVector(n_dim=self.sim_param.n_dim, dtype=float_prec) # Particle Acceleration
+        self.rho = AdaptiveVector(n_dim=1, dtype=float_prec) # Particle Density
+        self.p = AdaptiveVector(n_dim=1, dtype=float_prec) # Particle Pressure
         
         # Global Energy Variables
         self.Ek_G = np.array([], dtype=float_prec) # Particle Kinetic Energy
@@ -111,9 +112,9 @@ class BaseSPH(abc.ABC):
         self.E_total_G = np.float_() # Total Energy
         
         # Local Energy Variables
-        self.Ek = np.array([], dtype=float_prec) # Particle Kinetic Energy
-        self.Ep = np.array([], dtype=float_prec) # Particle Potential Energy
-        self.E = np.array([], dtype=float_prec) # Particle Total Energy
+        self.Ek = AdaptiveVector(n_dim=1, dtype=float_prec) # Particle Kinetic Energy
+        self.Ep = AdaptiveVector(n_dim=1, dtype=float_prec) # Particle Potential Energy
+        self.E = AdaptiveVector(n_dim=1, dtype=float_prec) # Particle Total Energy
         self.Ek_total = np.float_() # Total Kinetic Energy
         self.Ep_total = np.float_() # Total Potential Energy
         self.E_total = np.float_() # Total Energy
@@ -239,7 +240,7 @@ class BaseSPH(abc.ABC):
 
         if self.mp_manager.proc_id == 0: self.io_manager.init_writer_services()
 
-        self.id = self.mp_manager.global_comm.get_particle_id(self.mp_manager.proc_id, self.id_G, self.id, self.sim_param.int_prec)
+        self.id.data = self.mp_manager.global_comm.get_particle_id(self.mp_manager.proc_id, self.id_G, self.id.data, self.sim_param.int_prec)
 
         self._sync_G2L()
 
@@ -275,21 +276,21 @@ class BaseSPH(abc.ABC):
             index_end = index_start + n_dim
             
             # Ek <- v.v
-            v = self.v[index_start:index_end]
-            self.Ek[i] = np.dot(v,v)
+            v = self.v.data[index_start:index_end]
+            self.Ek.data[i] = np.dot(v,v)
             
         # Ep <- z
-        self.Ep = self.x[self.sim_param.n_dim-1::self.sim_param.n_dim]
+        self.Ep.data[:self.Ep.end_index] = self.x.data[self.sim_param.n_dim-1 : self.x.end_index:self.sim_param.n_dim]
 
         # Energy Computation
-        self.Ek = 0.5 * self.particle_model.m * self.Ek
-        self.Ep = self.particle_model.m * self.atmospheric_model.g * self.Ep
-        self.E = self.Ek + self.Ep
+        self.Ek.data[:self.Ek.end_index] = 0.5 * self.particle_model.m * self.Ek()
+        self.Ep.data[:self.Ep.end_index] = self.particle_model.m * self.atmospheric_model.g * self.Ep()
+        self.E.data[:self.E.end_index] = self.Ek() + self.Ep()
         
         # Total Energy Computation
-        self.Ek_total = np.sum(self.Ek)
-        self.Ep_total = np.sum(self.Ep)
-        self.E_total = np.sum(self.E)
+        self.Ek_total = np.sum(self.Ek())
+        self.Ep_total = np.sum(self.Ep())
+        self.E_total = np.sum(self.E())
     
 
     def _aggregate_total_energy(self):
@@ -302,24 +303,24 @@ class BaseSPH(abc.ABC):
     def _sync_L2G(self):
 
         # Output Result
-        self.mp_manager.global_comm.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
-                                             self.rho, self.rho_G, 1)
-        self.mp_manager.global_comm.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
-                                             self.p, self.p_G, 1)
+        self.mp_manager.global_comm.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id(),
+                                             self.rho.data, self.rho_G, 1)
+        self.mp_manager.global_comm.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id(),
+                                             self.p(), self.p_G, 1)
 
-        self.mp_manager.global_comm.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
-                                             self.x, self.x_G, 2)
-        self.mp_manager.global_comm.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
-                                             self.v, self.v_G, 2)
-        self.mp_manager.global_comm.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
-                                             self.a, self.a_G, 2)
+        self.mp_manager.global_comm.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id(),
+                                             self.x(), self.x_G, 2)
+        self.mp_manager.global_comm.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id(),
+                                             self.v(), self.v_G, 2)
+        self.mp_manager.global_comm.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id(),
+                                             self.a(), self.a_G, 2)
 
-        self.mp_manager.global_comm.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
-                                             self.E, self.E_G, 1)
-        self.mp_manager.global_comm.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
-                                             self.Ek, self.Ek_G, 1)
-        self.mp_manager.global_comm.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id,
-                                             self.Ep, self.Ep_G, 1)
+        self.mp_manager.global_comm.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id(),
+                                             self.E(), self.E_G, 1)
+        self.mp_manager.global_comm.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id(),
+                                             self.Ek(), self.Ek_G, 1)
+        self.mp_manager.global_comm.comm_L2G(self.sim_param.n_dim, self.n_particle, self.id(),
+                                             self.Ep(), self.Ep_G, 1)
 
         self._aggregate_total_energy()
 
@@ -334,45 +335,31 @@ class BaseSPH(abc.ABC):
         
         # Data Type
         dtype_float = self.sim_param.float_prec.get_np_dtype()
-        
-        # Assign Position
-
-        self.Ek = np.zeros(shape_1D, dtype=dtype_float)
-        self.Ep = np.zeros(shape_1D, dtype=dtype_float)
-        self.E = np.zeros(shape_1D, dtype=dtype_float)
-        
-        self.rho = np.zeros(shape=shape_1D, dtype=dtype_float)
-        self.p = np.zeros(shape_1D, dtype=dtype_float)
-                
-        # Assign 2D States
-        self.x = np.zeros(shape_2D, dtype = dtype_float)
-        self.v = np.zeros(shape_2D, dtype=dtype_float)
-        self.a = np.zeros(shape_2D, dtype=dtype_float)
 
         # Assign Scalar
-        self.E_total = np.sum(self.E)
-        self.Ek_total = np.sum(self.Ek)
-        self.Ep_total = np.sum(self.Ep)
+        self.E_total = np.sum(self.E())
+        self.Ek_total = np.sum(self.Ek())
+        self.Ep_total = np.sum(self.Ep())
 
         # Output Result
-        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id,
-                                             self.rho, self.rho_G, 1)
-        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id,
-                                             self.p, self.p_G, 1)
+        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id.data,
+                                             self.rho.data, self.rho_G, 1)
+        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id.data,
+                                             self.p.data, self.p_G, 1)
 
-        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id,
-                                             self.x, self.x_G, 2)
-        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id,
-                                             self.v, self.v_G, 2)
-        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id,
-                                             self.a, self.a_G, 2)
+        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id.data,
+                                             self.x.data, self.x_G, 2)
+        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id.data,
+                                             self.v.data, self.v_G, 2)
+        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id.data,
+                                             self.a.data, self.a_G, 2)
 
-        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id,
-                                             self.E, self.E_G, 1)
-        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id,
-                                             self.Ek, self.Ek_G, 1)
-        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id,
-                                             self.Ep, self.Ep_G, 1)
+        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id.data,
+                                             self.E.data, self.E_G, 1)
+        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id.data,
+                                             self.Ek.data, self.Ek_G, 1)
+        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id.data,
+                                             self.Ep.data, self.Ep_G, 1)
 
 
     def clean_up_simulation(self):
@@ -416,7 +403,7 @@ class BasicSPH(BaseSPH):
 
         for i in range(self.n_particle):
 
-            new_interaction = Interaction(self.id[i], self.sim_param)
+            new_interaction = Interaction(self.id()[i], self.sim_param)
             interactions.append(new_interaction)
 
         self._map_neighbour(interactions)
@@ -532,15 +519,15 @@ class BasicSPH(BaseSPH):
             for dim in range(self.sim_param.n_dim):
                 
                 # Lower Bound
-                if (self.x[index] <  domain[dim][0] + boundary_radius):
+                if (self.x()[index] <  domain[dim][0] + boundary_radius):
                     
-                    self.x[index] =  domain[dim][0] + boundary_radius
-                    self.v[index] *= -0.5
+                    self.x()[index] =  domain[dim][0] + boundary_radius
+                    self.v()[index] *= -0.5
                     
-                elif (self.x[index] >  domain[dim][1] - boundary_radius):
+                elif (self.x()[index] >  domain[dim][1] - boundary_radius):
                     
-                    self.x[index] =  domain[dim][1] - boundary_radius
-                    self.v[index] *= -0.5
+                    self.x()[index] =  domain[dim][1] - boundary_radius
+                    self.v()[index] *= -0.5
                     
                 index += 1
                 
@@ -557,26 +544,26 @@ class BasicSPH(BaseSPH):
 
         for i in range(self.n_particle):
 
-            id_i = self.id[i]
+            id_i = self.id()[i]
             index_i = i * n_dim
 
-            x = self.x[index_i : index_i + n_dim]
+            x = self.x()[index_i : index_i + n_dim]
 
             for j in range(i+1, self.n_particle):
 
-                id_j = self.id[j]
+                id_j = self.id()[j]
                 index_j = j * n_dim
 
-                if np.abs(x[n_dim - 1] - self.x[index_j + n_dim - 1]) <= max_dist: 
+                if np.abs(x[n_dim - 1] - self.x()[index_j + n_dim - 1]) <= max_dist: 
 
-                    dr = self.x[index_i : index_i+n_dim] - self.x[index_j : index_j+n_dim]
+                    dr = self.x()[index_i : index_i+n_dim] - self.x()[index_j : index_j+n_dim]
                     norm_dr = np.linalg.norm(dr, ord=2)
 
                     if norm_dr <= max_dist:
 
                         q = norm_dr / self.kernel.h
                         
-                        dv = self.v[index_i : index_i+n_dim] - self.v[index_j : index_j+n_dim]
+                        dv = self.v()[index_i : index_i+n_dim] - self.v()[index_j : index_j+n_dim]
 
                         interactions[i].add_neighbour(id_j, q, dr, dv)
                         interactions[j].add_neighbour(id_i, q, -dr, -dv)
@@ -591,7 +578,7 @@ class BasicSPH(BaseSPH):
             W = self.kernel.W(interactions[i].q[:interactions[i].index_1D])
 
             # Density
-            self.rho[i] = np.sum(W)
+            self.rho.data[i] = np.sum(W)
 
         self.rho = self.rho + self.kernel.W(np.array([0.0], dtype=self.sim_param.float_prec.get_np_dtype()))
         self.rho = self.particle_model.m * self.rho
@@ -615,7 +602,7 @@ class BasicSPH(BaseSPH):
             index_1D_i = i
             index_2D_i = i * n_dim
 
-            p_rho_i = self.p[index_1D_i] / self.rho[index_1D_i] ** 2
+            p_rho_i = self.p.data[index_1D_i] / self.rho.data[index_1D_i] ** 2
 
             for j in range(interactions[i].n_neighbour):
                 
@@ -628,27 +615,27 @@ class BasicSPH(BaseSPH):
                 nabla_W = self.kernel.nabla_W(q)
 
                 p_scale = -self.particle_model.m * nabla_W
-                p_rho = p_rho_i + self.p[id_j] / self.rho[id_j] ** 2
+                p_rho = p_rho_i + self.p.data[id_j] / self.rho.data[id_j] ** 2
                 unit_vec = interactions[i].dr[j * n_dim : (j+1) * n_dim] / (q * self.kernel.h)
 
                 a_p[index_2D_i : index_2D_i + n_dim] = a_p[index_2D_i : index_2D_i + n_dim] + unit_vec * p_rho * p_scale
 
-        self.a = a_p
+        self.a.data[:self.a.end_index] = a_p
 
         # Gravitational Forcing
-        self.a[n_dim-1::n_dim] = self.a[n_dim-1::n_dim] - self.atmospheric_model.g
+        self.a.data[n_dim-1::n_dim] = self.a.data[n_dim-1::n_dim] - self.atmospheric_model.g
 
 
     def _first_time_stepping(self):
         
-        self.v = self.v + 0.5 * self.sim_param.dt * self.a
-        self.x = self.x + self.sim_param.dt * self.v
+        self.v.data[:self.v.end_index] = self.v() + 0.5 * self.sim_param.dt * self.a()
+        self.x.data[:self.x.end_index] = self.x() + self.sim_param.dt * self.v()
 
 
     def _time_stepping(self):
         
-        self.v = self.v + self.a * self.sim_param.dt
-        self.x = self.x + self.v * self.sim_param.dt
+        self.v.data[:self.v.end_index] = self.v() + self.a() * self.sim_param.dt
+        self.x.data[:self.x.end_index] = self.x() + self.v() * self.sim_param.dt
 
 
 #%% One Particle SPH
@@ -751,11 +738,11 @@ class OneParticleSPH(BasicSPH):
     
     def _first_time_stepping(self):
         
-        self.v = np.array([0.5, 0.0, 0.0], dtype=self.sim_param.float_prec.get_np_dtype())
-        self.x = self.x + self.v * self.sim_param.dt
+        self.v.data[:self.v.end_index] = np.array([0.5, 0.0, 0.0], dtype=self.sim_param.float_prec.get_np_dtype())
+        self.x.data[:self.x.end_index] = self.x() + self.v() * self.sim_param.dt
 
 
     def _time_stepping(self):
 
-        self.v = np.array([0.5, 0.0, 0.0], dtype=self.sim_param.float_prec.get_np_dtype())
-        self.x = self.x + self.v * self.sim_param.dt
+        self.v.data[:self.v.end_index] = np.array([0.5, 0.0, 0.0], dtype=self.sim_param.float_prec.get_np_dtype())
+        self.x.data[:self.x.end_index] = self.x() + self.v() * self.sim_param.dt

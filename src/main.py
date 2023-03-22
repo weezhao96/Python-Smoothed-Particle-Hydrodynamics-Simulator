@@ -52,7 +52,7 @@ if __name__ == '__main__':
                 
         if attr[-2:] == '_G' and attr != 'n_particle_G' and attr[-7:] != 'total_G':
             print(' ')
-            print('{}: {}'.format(attr[:-2], sph.__dict__[attr[:-2]].dtype))
+            print('{}: {}'.format(attr[:-2], sph.__dict__[attr[:-2]].data.dtype))
             print('{}: {}'.format(attr, sph.__dict__[attr].dtype))
                                                      
         if attr == 'n_particle_G' or attr[-7:] == 'total_G':
