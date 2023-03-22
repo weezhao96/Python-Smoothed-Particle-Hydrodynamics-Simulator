@@ -41,17 +41,21 @@ class AdaptiveVector(object):
         start_index: int = self.n_particle * self.n_dim
         end_index: int = start_index + data.shape[0]
 
-        req_shape: int = self.n_particle * self.n_dim + data.shape[0]
-        if (self.shape[0] < req_shape):
-            self._resize_shape(req_shape - self.shape[0] + 10)
+        if (self.shape[0] < end_index):
+            self._resize_shape(end_index - self.shape[0] + 10)
 
         self.data[start_index: end_index] = data[:]
 
         self.n_particle += size
         self.end_chunk_index = self.n_particle
 
+    
+    def append_gap_chunk(self, index: int):
 
-    def fill_gaps(self):
+        self.gap_chunk_index.append(index)
+
+
+    def fill_gap_chunk(self):
 
         self.gap_chunk_index.sort(reverse=True)
 
@@ -74,26 +78,3 @@ class AdaptiveVector(object):
             self.gap_chunk_index = list(filter(lambda x: x <= self.end_chunk_index, self.gap_chunk_index))
 
         self.gap_chunk_index.clear()
-
-
-if __name__ == "__main__":
-
-    y = np.array([0,1,2,3,4,5,6,7,8,9], dtype=np.int32)
-
-    x = AdaptiveVector(2, np.int32)    
-    x.append_data(y)
-    x.gap_chunk_index.append(3)
-    x.gap_chunk_index.append(2)
-    x.n_particle -= 2
-    x.fill_gaps()
-    print(x.data)
-
-    x2 = AdaptiveVector(2, np.int32)
-    x2.append_data(y)
-    x2.gap_chunk_index.append(0)
-    x2.gap_chunk_index.append(2)
-    x2.n_particle -= 2
-    x2.fill_gaps()
-    print(x2.data)
-    print(x2.end_chunk_index)
-    print(x2.n_particle)
