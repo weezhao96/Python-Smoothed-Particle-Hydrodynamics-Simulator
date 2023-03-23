@@ -231,7 +231,7 @@ class GlobalComm(object):
             id_G[i] = grid.grid2proc[tuple(coord)]
 
 
-    def get_particle_id(self, proc_id: int, id_G: np.ndarray, id: np.ndarray, int_prec: IntType):
+    def get_particle_id(self, proc_id: int, id_G: np.ndarray, id: np.ndarray):
 
         id_list: list[int] = []
 

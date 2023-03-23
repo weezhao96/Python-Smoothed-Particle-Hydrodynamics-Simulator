@@ -240,7 +240,7 @@ class BaseSPH(abc.ABC):
 
         if self.mp_manager.proc_id == 0: self.io_manager.init_writer_services()
 
-        self.id.append_data(self.mp_manager.global_comm.get_particle_id(self.mp_manager.proc_id, self.id_G, self.id.data, self.sim_param.int_prec))
+        self.id.append_data(self.mp_manager.global_comm.get_particle_id(self.mp_manager.proc_id, self.id_G, self.id.data))
 
         self._sync_G2L()
 
