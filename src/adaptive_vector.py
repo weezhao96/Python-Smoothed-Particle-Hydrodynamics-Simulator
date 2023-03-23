@@ -20,14 +20,14 @@ class AdaptiveVector(object):
 
     def __init__(self, nd_array: int, n_dim: int, dtype: npt.DTypeLike):
         
-        self.nd_array = nd_array
-        self.n_dim = n_dim
-        self.n_particle = 0
-        self.end_index = self.n_particle * self.n_dim if self.nd_array == 2 else self.n_particle
+        self.nd_array = nd_array # Array Dimension
+        self.n_dim = n_dim # Simulation Spatial Dimension
+        self.n_particle = 0 # No. of Particle
+        self.end_index = self.n_particle * self.n_dim if self.nd_array == 2 else self.n_particle # Index at occupied array end
 
         self.data = np.ndarray(shape=tuple([self.end_index]), dtype=dtype)
-        self.end_chunk_index = 0
-        self.gap_chunk_index = []
+        self.end_chunk_index = 0 # End Particle Position
+        self.gap_chunk_index = [] # Gap Particle Position
 
     
     def __call__(self) -> np.ndarray:
@@ -43,7 +43,6 @@ class AdaptiveVector(object):
 
     def append_data(self, new_data: np.ndarray):
 
-        
         self.fill_gap_chunk()
 
         # Scalar Handling
