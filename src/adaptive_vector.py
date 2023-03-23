@@ -41,14 +41,14 @@ class AdaptiveVector(object):
         self.data.resize(shape, refcheck=False)
 
 
-    def append_data(self, new_data: list):
+    def append_data(self, new_data: np.ndarray):
 
         self.fill_gap_chunk()
 
+        print(new_data)
+        
         if not (isinstance(new_data, np.ndarray)):
-            new_data = [new_data]
-
-        new_data = np.array(new_data, dtype=self.data.dtype)
+            new_data = np.array([new_data], dtype=self.data.dtype)
 
         size: int = new_data.shape[0] // self.n_dim if self.nd_array == 2 else new_data.shape[0]
 

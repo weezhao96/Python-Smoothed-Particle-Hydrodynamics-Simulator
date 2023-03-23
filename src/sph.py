@@ -670,7 +670,7 @@ class OneParticleSPH(BasicSPH):
         self.sim_param.t_count += 1
 
         self.mp_manager.global_comm.sync_processes()
-
+        
         # Timestep Looping            
         while (self.sim_param.t < self.sim_param.T - np.finfo(float).eps):
             

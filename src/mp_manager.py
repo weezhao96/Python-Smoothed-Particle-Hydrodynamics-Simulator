@@ -240,7 +240,7 @@ class GlobalComm(object):
             if proc_id == id_G[i]:
                 id_list.append(i)
 
-        return id_list
+        return np.array(id_list, dtype=id.dtype)
 
 
     def sync_processes(self):
