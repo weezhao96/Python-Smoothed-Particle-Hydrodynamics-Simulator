@@ -45,6 +45,8 @@ class AdaptiveVector(object):
 
     def append_data(self, new_data: np.ndarray):
 
+        self.fill_gap_chunk()
+
         size: int = new_data.shape[0] // self.n_dim if self.nd_array == 2 else new_data.shape[0]
 
         start_index: int = self.end_index
