@@ -96,12 +96,12 @@ class BaseSPH(abc.ABC):
         
         # Local State Variables
         self.n_particle = int() # No. of Particle
-        self.id = AdaptiveVector(n_dim=1, dtype=int_prec) # Particle ID
-        self.x = AdaptiveVector(n_dim=self.sim_param.n_dim, dtype=float_prec) # Particle Position
-        self.v = AdaptiveVector(n_dim=self.sim_param.n_dim, dtype=float_prec) # Particle Velocity
-        self.a = AdaptiveVector(n_dim=self.sim_param.n_dim, dtype=float_prec) # Particle Acceleration
-        self.rho = AdaptiveVector(n_dim=1, dtype=float_prec) # Particle Density
-        self.p = AdaptiveVector(n_dim=1, dtype=float_prec) # Particle Pressure
+        self.id = AdaptiveVector(nd_array=1, n_dim=self.sim_param.n_dim, dtype=int_prec) # Particle ID
+        self.x = AdaptiveVector(nd_array=2, n_dim=self.sim_param.n_dim, dtype=float_prec) # Particle Position
+        self.v = AdaptiveVector(nd_array=2, n_dim=self.sim_param.n_dim, dtype=float_prec) # Particle Velocity
+        self.a = AdaptiveVector(nd_array=2, n_dim=self.sim_param.n_dim, dtype=float_prec) # Particle Acceleration
+        self.rho = AdaptiveVector(nd_array=1, n_dim=self.sim_param.n_dim, dtype=float_prec) # Particle Density
+        self.p = AdaptiveVector(nd_array=1, n_dim=self.sim_param.n_dim, dtype=float_prec) # Particle Pressure
         
         # Global Energy Variables
         self.Ek_G = np.array([], dtype=float_prec) # Particle Kinetic Energy
@@ -112,9 +112,9 @@ class BaseSPH(abc.ABC):
         self.E_total_G = np.float_() # Total Energy
         
         # Local Energy Variables
-        self.Ek = AdaptiveVector(n_dim=1, dtype=float_prec) # Particle Kinetic Energy
-        self.Ep = AdaptiveVector(n_dim=1, dtype=float_prec) # Particle Potential Energy
-        self.E = AdaptiveVector(n_dim=1, dtype=float_prec) # Particle Total Energy
+        self.Ek = AdaptiveVector(nd_array=1, n_dim=self.sim_param.n_dim, dtype=float_prec) # Particle Kinetic Energy
+        self.Ep = AdaptiveVector(nd_array=1, n_dim=self.sim_param.n_dim, dtype=float_prec) # Particle Potential Energy
+        self.E = AdaptiveVector(nd_array=1, n_dim=self.sim_param.n_dim, dtype=float_prec) # Particle Total Energy
         self.Ek_total = np.float_() # Total Kinetic Energy
         self.Ep_total = np.float_() # Total Potential Energy
         self.E_total = np.float_() # Total Energy
@@ -240,7 +240,7 @@ class BaseSPH(abc.ABC):
 
         if self.mp_manager.proc_id == 0: self.io_manager.init_writer_services()
 
-        self.id.data = self.mp_manager.global_comm.get_particle_id(self.mp_manager.proc_id, self.id_G, self.id.data, self.sim_param.int_prec)
+        self.id.append_data(self.mp_manager.global_comm.get_particle_id(self.mp_manager.proc_id, self.id_G, self.id.data, self.sim_param.int_prec))
 
         self._sync_G2L()
 
@@ -327,14 +327,7 @@ class BaseSPH(abc.ABC):
 
     def _sync_G2L(self):
 
-        self.n_particle = self.id.shape[0]
-        
-        # Array Shape
-        shape_2D = self.n_particle * self.sim_param.n_dim
-        shape_1D = self.n_particle
-        
-        # Data Type
-        dtype_float = self.sim_param.float_prec.get_np_dtype()
+        self.n_particle = self.id.n_particle
 
         # Assign Scalar
         self.E_total = np.sum(self.E())
@@ -342,24 +335,24 @@ class BaseSPH(abc.ABC):
         self.Ep_total = np.sum(self.Ep())
 
         # Output Result
-        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id.data,
-                                             self.rho.data, self.rho_G, 1)
-        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id.data,
-                                             self.p.data, self.p_G, 1)
+        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id,
+                                             self.rho, self.rho_G, 1)
+        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id,
+                                             self.p, self.p_G, 1)
 
-        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id.data,
-                                             self.x.data, self.x_G, 2)
-        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id.data,
-                                             self.v.data, self.v_G, 2)
-        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id.data,
-                                             self.a.data, self.a_G, 2)
+        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id,
+                                             self.x, self.x_G, 2)
+        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id,
+                                             self.v, self.v_G, 2)
+        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id,
+                                             self.a, self.a_G, 2)
 
-        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id.data,
-                                             self.E.data, self.E_G, 1)
-        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id.data,
-                                             self.Ek.data, self.Ek_G, 1)
-        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id.data,
-                                             self.Ep.data, self.Ep_G, 1)
+        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id,
+                                             self.E, self.E_G, 1)
+        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id,
+                                             self.Ek, self.Ek_G, 1)
+        self.mp_manager.global_comm.comm_G2L(self.sim_param.n_dim, self.n_particle, self.id,
+                                             self.Ep, self.Ep_G, 1)
 
 
     def clean_up_simulation(self):

@@ -5,6 +5,7 @@
 from __future__ import annotations
 from typing import Callable, Union
 from simulations import SimulationParameter, SimulationDomain
+from adaptive_vector import AdaptiveVector
 from precision_enums import IntType
 from multiprocessing import Process
 from multiprocessing.process import BaseProcess
@@ -232,14 +233,14 @@ class GlobalComm(object):
 
     def get_particle_id(self, proc_id: int, id_G: np.ndarray, id: np.ndarray, int_prec: IntType):
 
-        id_list = []
+        id_list: list[int] = []
 
         for i in range(id_G.shape[0]):
 
             if proc_id == id_G[i]:
                 id_list.append(i)
 
-        return np.array(id_list, dtype=int_prec.get_np_dtype(False))[:]
+        return id_list
 
 
     def sync_processes(self):
@@ -247,26 +248,22 @@ class GlobalComm(object):
         self.barrier.wait()
 
 
-    def comm_G2L(self, n_dim: int, n_particle: int, id: np.ndarray,
-                 array: np.ndarray, array_G: np.ndarray, nd_array: int):
-                
+    def comm_G2L(self, n_dim: int, n_particle: int, id: AdaptiveVector,
+                 array: AdaptiveVector, array_G: np.ndarray, nd_array: int):
+
         if nd_array == 1:
 
             for i in range(n_particle):
 
-                array[i] = array_G[id[i]]
+                array.append_data(array_G[id.data[i]])
 
         elif nd_array == 2:
-            
-            index = 0
 
             for i in range(n_particle):
 
-                index_G = id[i] * n_dim
+                index_G: int = id.data[i] * n_dim
 
-                array[index : index + n_dim] = array_G[index_G : index_G + n_dim]
-
-                index += n_dim
+                array.append_data(array_G[index_G : index_G + n_dim])
 
 
     def comm_L2G(self, n_dim: int, n_particle: int, id: np.ndarray,
@@ -276,15 +273,15 @@ class GlobalComm(object):
 
             for i in range(n_particle):
 
-                array_G[id[i]] = array[i]
+                array_G[id.data[i]] = array[i]
 
         elif nd_array == 2:
             
             index = 0
 
             for i in range(n_particle):
-
-                index_G = id[i] * n_dim
+                
+                index_G = id.data[i] * n_dim
 
                 array_G[index_G : index_G + n_dim] = array[index : index + n_dim]
 
@@ -348,7 +345,7 @@ class Grid(object):
 
         elif self.n_dim == 2:
 
-            root = np.sqrt(n_proc)
+            root: float = np.sqrt(n_proc)
             ceil = int(np.ceil(root))
 
             grid_size: list[int] = [n_proc, 1]
@@ -367,7 +364,6 @@ class Grid(object):
                         prev_diff = diff
                         grid_size = [i,j]
 
-
             self.grid_size = tuple(grid_size)
 
         # Grid Spacing
@@ -375,7 +371,7 @@ class Grid(object):
 
         for dim in range(self.n_dim):
 
-            distance = sim_domain.domain[dim][1] - sim_domain.domain[dim][0]
+            distance: float = sim_domain.domain[dim][1] - sim_domain.domain[dim][0]
 
             grid_spacing.append(distance / self.grid_size[dim])
 
@@ -416,12 +412,12 @@ class Grid(object):
             
             bound: list[list[float]] = []
 
-            grid = self.proc2grid[proc]
+            grid: tuple[int,...] = self.proc2grid[proc]
             
             for dim in range(self.n_dim):
 
-                lwr_bound = self.grid_spacing[dim] * grid[dim]
-                upr_bound = self.grid_spacing[dim] * (grid[dim] + 1)
+                lwr_bound: float = self.grid_spacing[dim] * grid[dim]
+                upr_bound: float = self.grid_spacing[dim] * (grid[dim] + 1)
 
                 bound.append([lwr_bound, upr_bound])
             
