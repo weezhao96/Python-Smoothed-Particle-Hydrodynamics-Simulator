@@ -43,24 +43,26 @@ class AdaptiveVector(object):
 
     def append_data(self, new_data: np.ndarray):
 
+        
         self.fill_gap_chunk()
 
-        print(new_data)
-        
+        # Scalar Handling
         if not (isinstance(new_data, np.ndarray)):
             new_data = np.array([new_data], dtype=self.data.dtype)
 
-        size: int = new_data.shape[0] // self.n_dim if self.nd_array == 2 else new_data.shape[0]
-
+        # Index Range
         start_index: int = self.end_index
         end_index: int = start_index + new_data.shape[0]
 
+        # Resize Shape if Needed
         if (self.data.shape[0] < end_index):
             self._resize_shape(end_index - self.data.shape[0] + 10)
 
+        # Assign Data
         self.data[start_index : end_index] = new_data[:]
 
-        self.n_particle += size
+        # Array Bounds Update
+        self.n_particle += new_data.shape[0] // self.n_dim if self.nd_array == 2 else new_data.shape[0]
         self.end_index = self.n_particle * self.n_dim if self.nd_array == 2 else self.n_particle
         self.end_chunk_index = self.n_particle
 
@@ -74,23 +76,31 @@ class AdaptiveVector(object):
 
         self.gap_chunk_index.sort(reverse=True)
 
+        self.gap_chunk_index = list(filter(lambda x: x <= self.end_chunk_index, self.gap_chunk_index))
+
         if len(self.gap_chunk_index) == 0:
             return
 
-        while self.end_chunk_index != self.n_particle:
+        while self.end_chunk_index != self.n_particle: # When Gap Exist
             
+            # Filter
+            self.gap_chunk_index = list(filter(lambda x: x <= self.end_chunk_index, self.gap_chunk_index))
+
+            # Last Particle Index
             start_index: int = (self.end_chunk_index - 1) * self.n_dim
             end_index: int = start_index + self.n_dim
 
+            # Gap Index
             gap_start_index: int = self.gap_chunk_index[-1] * self.n_dim
             gap_end_index: int = gap_start_index + self.n_dim
 
+            # Fill Gap
             self.data[gap_start_index:gap_end_index] = self.data[start_index:end_index]
-
+            
+            # Update Bounds
             self.gap_chunk_index.pop()
             self.end_chunk_index -= 1
 
-            self.gap_chunk_index = list(filter(lambda x: x <= self.end_chunk_index, self.gap_chunk_index))
-
+        # Update Bounds
         self.end_index = self.n_particle * self.n_dim if self.nd_array == 2 else self.n_particle
         self.gap_chunk_index.clear()
