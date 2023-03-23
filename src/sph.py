@@ -585,7 +585,7 @@ class BasicSPH(BaseSPH):
         
         # Parameter
         n_dim = self.sim_param.n_dim
-        shape = self.a.shape[0]
+        shape = self.a.data.shape[0]
         
         # Pressure Computation
         a_p = np.zeros(shape=shape, dtype=self.sim_param.float_prec.get_np_dtype())
@@ -669,6 +669,7 @@ class OneParticleSPH(BasicSPH):
         self.sim_param.t += self.sim_param.dt
         self.sim_param.t_count += 1
 
+        self.mp_manager.local_comm.interchange_particles()
         self.mp_manager.global_comm.sync_processes()
         
         # Timestep Looping            

@@ -5,8 +5,8 @@
 from __future__ import annotations
 from typing import Callable, Union
 from simulations import SimulationParameter, SimulationDomain
+from state_xv import StateXV
 from adaptive_vector import AdaptiveVector
-from precision_enums import IntType
 from multiprocessing import Process
 from multiprocessing.process import BaseProcess
 from multiprocessing.shared_memory import SharedMemory
@@ -300,6 +300,26 @@ class LocalComm(object):
         
         self.out_comms = out_comms
         self.in_comms = in_comms
+
+    
+    def interchange_particles(self):
+
+        particle_destination = self._assign_particle2proc()
+        self._send_departing_particles(particle_destination)
+        self._receive_arriving_particles()
+    
+
+    def _assign_particle2proc(self) -> np.ndarray:
+
+        return np.array([], dtype=np.uint32)
+
+
+    def _send_departing_particles(self, particle_destination: np.ndarray):
+        pass
+
+    
+    def _receive_arriving_particles(self):
+        pass
 
 
 #%% Grid
