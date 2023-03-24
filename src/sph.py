@@ -703,6 +703,7 @@ class OneParticleSPH(BasicSPH):
             self.sim_param.t += self.sim_param.dt
             self.sim_param.t_count += 1
 
+            self.mp_manager.local_comm.interchange_particles()
             self.mp_manager.global_comm.sync_processes()
 
         # Time End

@@ -11,5 +11,5 @@ import numpy as np
 class StateXV(object):
 
     id: int
-    x: np.float_
-    v: np.float_
+    x: np.ndarray
+    v: np.ndarray

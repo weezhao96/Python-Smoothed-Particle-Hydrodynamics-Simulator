@@ -219,19 +219,19 @@ class GlobalComm(object):
 
         for i in range(n_particle):
             
-            coord = []
+            coord: list[float] = []
+            x_particle: np.ndarray = x[index : index + grid.n_dim]
 
             for dim in range(grid.n_dim):
 
-                coord.append(x[index+dim] // grid.grid_spacing[dim])
-                index += 1
+                coord.append(x_particle[dim] // grid.grid_spacing[dim])
 
-            index += 1
+            index += (grid.n_dim + 1)
 
             id_G[i] = grid.grid2proc[tuple(coord)]
 
 
-    def get_particle_id(self, proc_id: int, id_G: np.ndarray, id: np.ndarray):
+    def get_particle_id(self, proc_id: int, id_G: np.ndarray, id: np.ndarray) -> np.ndarray:
 
         id_list: list[int] = []
 
@@ -302,22 +302,61 @@ class LocalComm(object):
         self.in_comms = in_comms
 
     
-    def interchange_particles(self):
+    def interchange_particles(self, proc_id: int, n_particle: int, grid: Grid, x: AdaptiveVector, id: AdaptiveVector):
 
-        particle_destination = self._assign_particle2proc()
+        particle_destination = self._assign_particle2proc(n_particle=n_particle, grid=grid, x=x, id=id)
         self._send_departing_particles(particle_destination)
         self._receive_arriving_particles()
     
 
-    def _assign_particle2proc(self) -> np.ndarray:
+    def _assign_particle2proc(self, n_particle: int, grid: Grid, x: AdaptiveVector, id: AdaptiveVector) -> np.ndarray:
 
-        return np.array([], dtype=np.uint32)
+        index: int = 0
+        particle_destination : np.ndarray = -1 * np.ones(shape=(n_particle, grid.n_dim), dtype=id.data.dtype)
+
+        for i in range(n_particle):
+            
+            coord: list[float] = []
+            x_particle: np.ndarray = x.data[index : index + grid.n_dim]
+
+            for dim in range(grid.n_dim):
+
+                coord.append(x_particle[dim] // grid.grid_spacing[dim])
+
+            index += (grid.n_dim + 1)
+
+            particle_destination[i,:] = coord
+        
+        return particle_destination
 
 
-    def _send_departing_particles(self, particle_destination: np.ndarray):
-        pass
+    def _send_departing_particles(self, proc_id: int, grid: Grid, particle_destination: np.ndarray, id: AdaptiveVector, x: AdaptiveVector, v: AdaptiveVector):
+        
+        n_dim: int = grid.n_dim + 1
+        n_particle: int = particle_destination.shape[0]
+        proc_coord: tuple[int,...] = grid.proc2grid[proc_id]
 
-    
+        for i in range(n_particle):
+
+            dest_coord: np.ndarray = particle_destination[i,:]
+            dest_proc_id: int = grid.grid2proc[dest_coord]
+
+            if (dest_proc_id != proc_id):
+
+                vector: np.ndarray = dest_coord - np.array(proc_coord)
+                particle: StateXV = StateXV(id=id.data[i], x=x.data[i*n_dim : (i+1)*n_dim], v=v.data[i*n_dim : (i+1)*n_dim])
+
+                if (len(vector.shape) == 1):
+
+                    conn: PipeConnection = self.out_comms[vector[0]]
+
+                elif (len(vector.shape) == 2):
+
+                    conn: PipeConnection = self.out_comms[vector[0]][vector[1]]
+
+                conn.send(particle)
+
+
     def _receive_arriving_particles(self):
         pass
 
